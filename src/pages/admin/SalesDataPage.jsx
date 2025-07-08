@@ -15,7 +15,7 @@ const CONFIG = {
   DRIVE_FOLDER_ID: "1fhwpde9ROtn2Kr_-lgT2n6_1cvasrAQt",
 
   // Sheet name to work with
-  SHEET_NAME: "Checklist",
+  SHEET_NAME: "TLS",
 
   // Page configuration
   PAGE_CONFIG: {
@@ -65,11 +65,18 @@ function AccountDataPage() {
 
   const parseGoogleSheetsDate = (dateStr) => {
     if (!dateStr) return ""
-
+  
+    // Handle DD/MM/YYYY format (existing functionality)
     if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
       return dateStr
     }
-
+  
+    // Handle DD/MM/YYYY HH:MM:SS format (NEW: extract only date part)
+    if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2}$/)) {
+      return dateStr.split(' ')[0] // Extract only the date part before the space
+    }
+  
+    // Handle Google Sheets Date() format (existing functionality)
     if (typeof dateStr === "string" && dateStr.startsWith("Date(")) {
       const match = /Date$$(\d+),(\d+),(\d+)$$/.exec(dateStr)
       if (match) {
@@ -79,7 +86,8 @@ function AccountDataPage() {
         return `${day.toString().padStart(2, "0")}/${(month + 1).toString().padStart(2, "0")}/${year}`
       }
     }
-
+  
+    // Try to parse as regular date (existing functionality)
     try {
       const date = new Date(dateStr)
       if (!isNaN(date.getTime())) {
@@ -88,7 +96,7 @@ function AccountDataPage() {
     } catch (error) {
       console.error("Error parsing date:", error)
     }
-
+  
     return dateStr
   }
 
@@ -1015,10 +1023,10 @@ function AccountDataPage() {
                             <div className="text-sm text-gray-900">{account["col4"] || "—"}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-xs truncate" title={account["col5"]}>
-                              {account["col5"] || "—"}
-                            </div>
-                          </td>
+  <div className="text-sm text-gray-900 max-w-xs break-words whitespace-normal">
+    {account["col5"] || "—"}
+  </div>
+</td>
                           <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
                             <div className="text-sm text-gray-900">{account["col6"] || "—"}</div>
                           </td>

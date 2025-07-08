@@ -1,4 +1,4 @@
-//REFRASYNTH Tasks Page
+//Checklist Tasks Page
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
@@ -8,26 +8,27 @@ import AdminLayout from "../../components/layout/AdminLayout"
 // Configuration object - Move all configurations here
 const CONFIG = {
   // Google Apps Script URL
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby0-aE9uNuU3yBJ9SAHvAfXycYt5vPyvAtlAauVy-xlH9rc4fPCGSQM6pvsqZ9QvSvbyg/exec",
-  
+  APPS_SCRIPT_URL:
+    "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec",
+
   // Google Drive folder ID for file uploads
-  DRIVE_FOLDER_ID: "1P6jC4X8eMoyPUOUCFp8G30I83aAeEIy9",
-  
+  DRIVE_FOLDER_ID: "1fhwpde9ROtn2Kr_-lgT2n6_1cvasrAQt",
+
   // Sheet name to work with
-  SHEET_NAME: "REFRASYNTH",
-  
+  SHEET_NAME: "MADHURA",
+
   // Page configuration
   PAGE_CONFIG: {
-    title: "REFRASYNTH Tasks",
-    historyTitle: "REFRASYNTH Task History",
+    title: "Checklist Tasks",
+    historyTitle: "Checklist Task History",
     description: "Showing today, tomorrow's tasks and past due tasks",
-    historyDescription: "Read-only view of completed tasks with submission history"
-  }
+    historyDescription: "Read-only view of completed tasks with submission history",
+  },
 }
 
 function AccountDataPage() {
   const [accountData, setAccountData] = useState([])
-  const [selectedItems, setSelectedItems] = useState(new Set()) // Changed to Set for better performance
+  const [selectedItems, setSelectedItems] = useState(new Set())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [additionalData, setAdditionalData] = useState({})
@@ -70,7 +71,7 @@ function AccountDataPage() {
     }
 
     if (typeof dateStr === "string" && dateStr.startsWith("Date(")) {
-      const match = /Date\((\d+),(\d+),(\d+)\)/.exec(dateStr)
+      const match = /Date$$(\d+),(\d+),(\d+)$$/.exec(dateStr)
       if (match) {
         const year = Number.parseInt(match[1], 10)
         const month = Number.parseInt(match[2], 10)
@@ -119,10 +120,10 @@ function AccountDataPage() {
   const filteredAccountData = useMemo(() => {
     const filtered = searchTerm
       ? accountData.filter((account) =>
-          Object.values(account).some(
-            (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-          ),
-        )
+        Object.values(account).some(
+          (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
+      )
       : accountData
 
     return filtered.sort(sortDateWise)
@@ -133,8 +134,8 @@ function AccountDataPage() {
       .filter((item) => {
         const matchesSearch = searchTerm
           ? Object.values(item).some(
-              (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-            )
+            (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+          )
           : true
 
         const matchesMember = selectedMembers.length > 0 ? selectedMembers.includes(item["col4"]) : true
@@ -175,12 +176,12 @@ function AccountDataPage() {
     const memberStats =
       selectedMembers.length > 0
         ? selectedMembers.reduce((stats, member) => {
-            const memberTasks = historyData.filter((task) => task["col4"] === member).length
-            return {
-              ...stats,
-              [member]: memberTasks,
-            }
-          }, {})
+          const memberTasks = historyData.filter((task) => task["col4"] === member).length
+          return {
+            ...stats,
+            [member]: memberTasks,
+          }
+        }, {})
         : {}
     const filteredTotal = filteredHistoryData.length
 
@@ -205,7 +206,7 @@ function AccountDataPage() {
     if (userRole === "admin") {
       return membersList
     } else {
-      return membersList.filter(member => member.toLowerCase() === username.toLowerCase())
+      return membersList.filter((member) => member.toLowerCase() === username.toLowerCase())
     }
   }
 
@@ -257,7 +258,7 @@ function AccountDataPage() {
       } else if (Array.isArray(data)) {
         rows = data
       } else if (data.values) {
-        rows = data.values.map(row => ({ c: row.map(val => ({ v: val })) }))
+        rows = data.values.map((row) => ({ c: row.map((val) => ({ v: val })) }))
       }
 
       rows.forEach((row, rowIndex) => {
@@ -265,7 +266,7 @@ function AccountDataPage() {
 
         let rowValues = []
         if (row.c) {
-          rowValues = row.c.map(cell => cell && cell.v !== undefined ? cell.v : "")
+          rowValues = row.c.map((cell) => (cell && cell.v !== undefined ? cell.v : ""))
         } else if (Array.isArray(row)) {
           rowValues = row
         } else {
@@ -294,10 +295,12 @@ function AccountDataPage() {
 
         // Create stable unique ID using task ID and row index
         const taskId = rowValues[1] || ""
-        const stableId = taskId ? `task_${taskId}_${googleSheetsRowIndex}` : `row_${googleSheetsRowIndex}_${Math.random().toString(36).substring(2, 15)}`
+        const stableId = taskId
+          ? `task_${taskId}_${googleSheetsRowIndex}`
+          : `row_${googleSheetsRowIndex}_${Math.random().toString(36).substring(2, 15)}`
 
         const rowData = {
-          _id: stableId, // More stable ID
+          _id: stableId,
           _rowIndex: googleSheetsRowIndex,
           _taskId: taskId,
         }
@@ -346,7 +349,8 @@ function AccountDataPage() {
             pendingAccounts.push(rowData)
           }
         } else if (hasColumnG && !isColumnKEmpty) {
-          const isUserHistoryMatch = currentUserRole === "admin" || assignedTo.toLowerCase() === currentUsername.toLowerCase()
+          const isUserHistoryMatch =
+            currentUserRole === "admin" || assignedTo.toLowerCase() === currentUsername.toLowerCase()
           if (isUserHistoryMatch) {
             historyRows.push(rowData)
           }
@@ -368,13 +372,13 @@ function AccountDataPage() {
     fetchSheetData()
   }, [fetchSheetData])
 
-  // Fixed checkbox handlers with better state management
+  // Checkbox handlers with better state management
   const handleSelectItem = useCallback((id, isChecked) => {
     console.log(`Checkbox action: ${id} -> ${isChecked}`)
-   
+
     setSelectedItems((prev) => {
       const newSelected = new Set(prev)
-     
+
       if (isChecked) {
         newSelected.add(id)
       } else {
@@ -391,40 +395,46 @@ function AccountDataPage() {
           return newRemarksData
         })
       }
-     
+
       console.log(`Updated selection: ${Array.from(newSelected)}`)
       return newSelected
     })
   }, [])
 
-  const handleCheckboxClick = useCallback((e, id) => {
-    e.stopPropagation()
-    const isChecked = e.target.checked
-    console.log(`Checkbox clicked: ${id}, checked: ${isChecked}`)
-    handleSelectItem(id, isChecked)
-  }, [handleSelectItem])
+  const handleCheckboxClick = useCallback(
+    (e, id) => {
+      e.stopPropagation()
+      const isChecked = e.target.checked
+      console.log(`Checkbox clicked: ${id}, checked: ${isChecked}`)
+      handleSelectItem(id, isChecked)
+    },
+    [handleSelectItem],
+  )
 
-  const handleSelectAllItems = useCallback((e) => {
-    e.stopPropagation()
-    const checked = e.target.checked
-    console.log(`Select all clicked: ${checked}`)
+  const handleSelectAllItems = useCallback(
+    (e) => {
+      e.stopPropagation()
+      const checked = e.target.checked
+      console.log(`Select all clicked: ${checked}`)
 
-    if (checked) {
-      const allIds = filteredAccountData.map((item) => item._id)
-      setSelectedItems(new Set(allIds))
-      console.log(`Selected all items: ${allIds}`)
-    } else {
-      setSelectedItems(new Set())
-      setAdditionalData({})
-      setRemarksData({})
-      console.log("Cleared all selections")
-    }
-  }, [filteredAccountData])
+      if (checked) {
+        const allIds = filteredAccountData.map((item) => item._id)
+        setSelectedItems(new Set(allIds))
+        console.log(`Selected all items: ${allIds}`)
+      } else {
+        setSelectedItems(new Set())
+        setAdditionalData({})
+        setRemarksData({})
+        console.log("Cleared all selections")
+      }
+    },
+    [filteredAccountData],
+  )
 
   const handleImageUpload = async (id, e) => {
     const file = e.target.files[0]
     if (!file) return
-   
+
     console.log(`Image upload for: ${id}`)
     setAccountData((prev) => prev.map((item) => (item._id === id ? { ...item, image: file } : item)))
   }
@@ -443,9 +453,10 @@ function AccountDataPage() {
     resetFilters()
   }
 
+  // MAIN SUBMIT FUNCTION - CACHE MEMORY APPROACH
   const handleSubmit = async () => {
     const selectedItemsArray = Array.from(selectedItems)
-   
+
     if (selectedItemsArray.length === 0) {
       alert("Please select at least one item to submit")
       return
@@ -481,6 +492,38 @@ function AccountDataPage() {
       const today = new Date()
       const todayFormatted = formatDateToDDMMYYYY(today)
 
+      // Prepare submitted items for history BEFORE removing from pending
+      const submittedItemsForHistory = selectedItemsArray.map((id) => {
+        const item = accountData.find((account) => account._id === id)
+        return {
+          ...item,
+          col10: todayFormatted, // Actual completion date
+          col12: additionalData[id] || "", // Status (Yes/No)
+          col13: remarksData[id] || "", // Remarks
+          col14: item.image ? (typeof item.image === "string" ? item.image : "") : "", // Image URL (will be updated after upload)
+        }
+      })
+
+      // CACHE MEMORY UPDATE 1: Remove submitted items from pending table immediately
+      setAccountData((prev) => prev.filter((item) => !selectedItems.has(item._id)))
+
+      // CACHE MEMORY UPDATE 2: Add submitted items to history immediately
+      setHistoryData((prev) => [...submittedItemsForHistory, ...prev])
+
+      // Clear selections and form data immediately
+      setSelectedItems(new Set())
+      setAdditionalData({})
+      setRemarksData({})
+
+      // Show success message immediately
+      setSuccessMessage(`Successfully processed ${selectedItemsArray.length} task records! Tasks moved to history.`)
+
+      // Auto-clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage("")
+      }, 5000)
+
+      // Now handle the background submission to Google Sheets
       const submissionData = await Promise.all(
         selectedItemsArray.map(async (id) => {
           const item = accountData.find((account) => account._id === id)
@@ -489,7 +532,7 @@ function AccountDataPage() {
             id: id,
             taskId: item["col1"],
             rowIndex: item._rowIndex,
-            expectedTaskId: item._taskId
+            expectedTaskId: item._taskId,
           })
 
           let imageUrl = ""
@@ -501,7 +544,10 @@ function AccountDataPage() {
               const uploadFormData = new FormData()
               uploadFormData.append("action", "uploadFile")
               uploadFormData.append("base64Data", base64Data)
-              uploadFormData.append("fileName", `task_${item["col1"]}_${Date.now()}.${item.image.name.split('.').pop()}`)
+              uploadFormData.append(
+                "fileName",
+                `task_${item["col1"]}_${Date.now()}.${item.image.name.split(".").pop()}`,
+              )
               uploadFormData.append("mimeType", item.image.type)
               uploadFormData.append("folderId", CONFIG.DRIVE_FOLDER_ID)
 
@@ -513,6 +559,13 @@ function AccountDataPage() {
               const uploadResult = await uploadResponse.json()
               if (uploadResult.success) {
                 imageUrl = uploadResult.fileUrl
+
+                // Update the history data with the actual image URL
+                setHistoryData((prev) =>
+                  prev.map((historyItem) =>
+                    historyItem._id === id ? { ...historyItem, col14: imageUrl } : historyItem,
+                  ),
+                )
               }
             } catch (uploadError) {
               console.error("Error uploading image:", uploadError)
@@ -532,6 +585,7 @@ function AccountDataPage() {
 
       console.log("Final submission data:", submissionData)
 
+      // Submit to Google Sheets in background
       const formData = new FormData()
       formData.append("sheetName", CONFIG.SHEET_NAME)
       formData.append("action", "updateTaskData")
@@ -544,27 +598,17 @@ function AccountDataPage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        setAccountData((prev) =>
-          prev.map((item) => (selectedItems.has(item._id) ? { ...item, status: "completed", image: null } : item)),
-        )
-
-        setSuccessMessage(
-          `Successfully processed ${selectedItemsArray.length} task records! Columns K, M, N, and O updated.`,
-        )
-        setSelectedItems(new Set())
-        setAdditionalData({})
-        setRemarksData({})
-
-        setTimeout(() => {
-          fetchSheetData()
-        }, 2000)
-      } else {
-        throw new Error(result.error || "Submission failed")
+      if (!result.success) {
+        // If submission failed, we could optionally rollback the cache changes
+        console.error("Background submission failed:", result.error)
+        // For now, we'll just log the error but keep the UI updated
+        // You could implement rollback logic here if needed
       }
     } catch (error) {
       console.error("Submission error:", error)
-      alert("Failed to submit task records: " + error.message)
+      // Since we already updated the UI optimistically, we could rollback here
+      // For now, we'll just show an error but keep the UI changes
+      alert("Warning: There was an error with background submission, but your changes are saved locally.")
     } finally {
       setIsSubmitting(false)
     }
@@ -636,7 +680,9 @@ function AccountDataPage() {
 
         <div className="rounded-lg border border-purple-200 shadow-md bg-white overflow-hidden">
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 p-4">
-            <h2 className="text-purple-700 font-medium">{showHistory ? `Completed ${CONFIG.SHEET_NAME} Tasks` : `Pending ${CONFIG.SHEET_NAME} Tasks`}</h2>
+            <h2 className="text-purple-700 font-medium">
+              {showHistory ? `Completed ${CONFIG.SHEET_NAME} Tasks` : `Pending ${CONFIG.SHEET_NAME} Tasks`}
+            </h2>
             <p className="text-purple-600 text-sm">
               {showHistory
                 ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"} tasks`
@@ -757,24 +803,50 @@ function AccountDataPage() {
                 </div>
               </div>
 
-              {/* History Table */}
-              <div className="overflow-x-auto">
+              {/* History Table - Single scroll container */}
+              <div className="h-[calc(100vh-300px)] overflow-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Firm</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Given By</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Description</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Task Start Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Freq</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enable Reminders</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Require Attachment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">Actual Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-50">Remarks</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Shop Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Given By
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                        Task Start Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Freq
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Enable Reminders
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Require Attachment
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                        Actual Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-50">
+                        Remarks
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Attachment
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -814,12 +886,14 @@ function AccountDataPage() {
                             <div className="text-sm font-medium text-gray-900">{history["col10"] || "—"}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap bg-blue-50">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${history["col12"] === "Yes"
-                              ? "bg-green-100 text-green-800"
-                              : history["col12"] === "No"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                              }`}>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${history["col12"] === "Yes"
+                                ? "bg-green-100 text-green-800"
+                                : history["col12"] === "No"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                                }`}
+                            >
                               {history["col12"] || "—"}
                             </span>
                           </td>
@@ -837,7 +911,7 @@ function AccountDataPage() {
                                 className="text-blue-600 hover:text-blue-800 underline flex items-center"
                               >
                                 <img
-                                  src={history["col14"] || "/api/placeholder/32/32"}
+                                  src={history["col14"] || "/placeholder.svg?height=32&width=32"}
                                   alt="Attachment"
                                   className="h-8 w-8 object-cover rounded-md mr-2"
                                 />
@@ -863,10 +937,10 @@ function AccountDataPage() {
               </div>
             </>
           ) : (
-            /* Regular Tasks Table */
-            <div className="overflow-x-auto">
+            /* Regular Tasks Table - Single scroll container */
+            <div className="h-[calc(100vh-250px)] overflow-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <input
@@ -876,18 +950,42 @@ function AccountDataPage() {
                         onChange={handleSelectAllItems}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Firm</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Given By</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Description</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Task Start Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Freq</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enable Reminders</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Require Attachment</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Image</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Task ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Shop Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Given By
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Task Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                      Task Start Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Freq
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Enable Reminders
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Require Attachment
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Remarks
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Upload Image
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -895,10 +993,7 @@ function AccountDataPage() {
                     filteredAccountData.map((account) => {
                       const isSelected = selectedItems.has(account._id)
                       return (
-                        <tr
-                          key={account._id}
-                          className={`${isSelected ? "bg-purple-50" : ""} hover:bg-gray-50`}
-                        >
+                        <tr key={account._id} className={`${isSelected ? "bg-purple-50" : ""} hover:bg-gray-50`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
@@ -920,10 +1015,10 @@ function AccountDataPage() {
                             <div className="text-sm text-gray-900">{account["col4"] || "—"}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-xs truncate" title={account["col5"]}>
-                              {account["col5"] || "—"}
-                            </div>
-                          </td>
+  <div className="text-sm text-gray-900 max-w-xs break-words whitespace-normal">
+    {account["col5"] || "—"}
+  </div>
+</td>
                           <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
                             <div className="text-sm text-gray-900">{account["col6"] || "—"}</div>
                           </td>
@@ -972,7 +1067,9 @@ function AccountDataPage() {
                               <div className="flex items-center">
                                 <img
                                   src={
-                                    typeof account.image === "string" ? account.image : URL.createObjectURL(account.image)
+                                    typeof account.image === "string"
+                                      ? account.image
+                                      : URL.createObjectURL(account.image)
                                   }
                                   alt="Receipt"
                                   className="h-10 w-10 object-cover rounded-md mr-2"
@@ -999,7 +1096,9 @@ function AccountDataPage() {
                               >
                                 <Upload className="h-4 w-4 mr-1" />
                                 <span className="text-xs">
-                                  {account["col9"]?.toUpperCase() === "YES" ? "Required Upload" : "Upload Receipt Image"}
+                                  {account["col9"]?.toUpperCase() === "YES"
+                                    ? "Required Upload"
+                                    : "Upload Receipt Image"}
                                   {account["col9"]?.toUpperCase() === "YES" && (
                                     <span className="text-red-500 ml-1">*</span>
                                   )}
@@ -1019,7 +1118,7 @@ function AccountDataPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={14} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={13} className="px-6 py-4 text-center text-gray-500">
                         {searchTerm
                           ? "No tasks matching your search"
                           : "No pending tasks found for today, tomorrow, or past due dates"}

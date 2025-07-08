@@ -1,561 +1,468 @@
+//Checklist Tasks Page
 "use client"
 
-import { useState, useEffect } from "react"
-import { CheckCircle2, Upload, X, Search, History, ArrowLeft, Calendar, Check } from "lucide-react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { CheckCircle2, Upload, X, Search, History, ArrowLeft } from "lucide-react"
 import AdminLayout from "../../components/layout/AdminLayout"
-import ReactDOM from 'react-dom';
 
-// Google Apps Script URL
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz47q4SiLvJJom8dRGteqjhufs0Iui4rYTLMeTYqOgY_MFrS0C0o0XkRCPzAOdEeg4jqg/exec"
-// Google Drive folder ID
-const DRIVE_FOLDER_ID = "1xdahLZtnhCGnHve4HdPolTm5y4DLqdyl"
+// Configuration object - Move all configurations here
+const CONFIG = {
+  // Google Apps Script URL
+  APPS_SCRIPT_URL:
+    "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec",
+
+  // Google Drive folder ID for file uploads
+  DRIVE_FOLDER_ID: "1fhwpde9ROtn2Kr_-lgT2n6_1cvasrAQt",
+
+  // Sheet name to work with
+  SHEET_NAME: "FRIENDS",
+
+  // Page configuration
+  PAGE_CONFIG: {
+    title: "Checklist Tasks",
+    historyTitle: "Checklist Task History",
+    description: "Showing today, tomorrow's tasks and past due tasks",
+    historyDescription: "Read-only view of completed tasks with submission history",
+  },
+}
 
 function AccountDataPage() {
   const [accountData, setAccountData] = useState([])
-  const [selectedItems, setSelectedItems] = useState([])
+  const [selectedItems, setSelectedItems] = useState(new Set())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
-  const [sheetHeaders, setSheetHeaders] = useState([])
   const [additionalData, setAdditionalData] = useState({})
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [debugInfo, setDebugInfo] = useState([])
-  const [remarksData, setRemarksData] = useState({}) // New state for remarks
+  const [remarksData, setRemarksData] = useState({})
   const [historyData, setHistoryData] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [membersList, setMembersList] = useState([])
   const [selectedMembers, setSelectedMembers] = useState([])
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [selectedHistoryItems, setSelectedHistoryItems] = useState([])
-  const [markingAsDone, setMarkingAsDone] = useState(false)
   const [userRole, setUserRole] = useState("")
-  const [confirmationModal, setConfirmationModal] = useState({
-    isOpen: false,
-    itemCount: 0
-  })
+  const [username, setUsername] = useState("")
 
-  // Format date as DD/MM/YYYY
   const formatDateToDDMMYYYY = (date) => {
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, "0")
+    const month = (date.getMonth() + 1).toString().padStart(2, "0")
     const year = date.getFullYear()
     return `${day}/${month}/${year}`
   }
 
-  // Check if a value is empty or null
   const isEmpty = (value) => {
-    return value === null || 
-           value === undefined || 
-           (typeof value === 'string' && value.trim() === '');
-  }
-
-  // Safe access to cell value
-  const getCellValue = (row, index) => {
-    if (!row || !row.c || index >= row.c.length) return null;
-    const cell = row.c[index];
-    return cell && 'v' in cell ? cell.v : null;
+    return value === null || value === undefined || (typeof value === "string" && value.trim() === "")
   }
 
   useEffect(() => {
-    const role = sessionStorage.getItem('role')
-    setUserRole(role || '')
+    const role = sessionStorage.getItem("role")
+    const user = sessionStorage.getItem("username")
+    setUserRole(role || "")
+    setUsername(user || "")
   }, [])
 
-  // Parse Google Sheets Date format into a proper date string
   const parseGoogleSheetsDate = (dateStr) => {
-    if (!dateStr) return '';
-    
-    if (typeof dateStr === 'string' && dateStr.startsWith('Date(')) {
-      // Handle Google Sheets Date(year,month,day) format
-      const match = /Date\((\d+),(\d+),(\d+)\)/.exec(dateStr);
+    if (!dateStr) return ""
+
+    if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      return dateStr
+    }
+
+    if (typeof dateStr === "string" && dateStr.startsWith("Date(")) {
+      const match = /Date$$(\d+),(\d+),(\d+)$$/.exec(dateStr)
       if (match) {
-        const year = parseInt(match[1], 10);
-        const month = parseInt(match[2], 10); // 0-indexed in Google's format
-        const day = parseInt(match[3], 10);
-        
-        // Format as DD/MM/YYYY
-        return `${day.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}/${year}`;
+        const year = Number.parseInt(match[1], 10)
+        const month = Number.parseInt(match[2], 10)
+        const day = Number.parseInt(match[3], 10)
+        return `${day.toString().padStart(2, "0")}/${(month + 1).toString().padStart(2, "0")}/${year}`
       }
     }
-    
-    // If it's already in DD/MM/YYYY format, return as is
-    if (typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      return dateStr;
-    }
-    
-    // If we get here, try to parse as a date and format
+
     try {
-      const date = new Date(dateStr);
+      const date = new Date(dateStr)
       if (!isNaN(date.getTime())) {
-        return formatDateToDDMMYYYY(date);
+        return formatDateToDDMMYYYY(date)
       }
-    } catch (e) {
-      console.error("Error parsing date:", e);
+    } catch (error) {
+      console.error("Error parsing date:", error)
     }
-    
-    // Return original if parsing fails
-    return dateStr;
+
+    return dateStr
   }
 
-  // Parse date from DD/MM/YYYY format
   const parseDateFromDDMMYYYY = (dateStr) => {
-    if (!dateStr || typeof dateStr !== 'string') return null
-    const parts = dateStr.split('/')
+    if (!dateStr || typeof dateStr !== "string") return null
+    const parts = dateStr.split("/")
     if (parts.length !== 3) return null
     return new Date(parts[2], parts[1] - 1, parts[0])
   }
 
-  // Format date from yyyy-mm-dd to DD/MM/YYYY
-  const formatDateFromHTML = (dateStr) => {
-    if (!dateStr) return "";
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return "";
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-
-  // Custom date sorting function
   const sortDateWise = (a, b) => {
-    // Ensure we're looking at column H (index 7)
-    const dateStrA = a['col7'] || ''
-    const dateStrB = b['col7'] || ''
-
+    const dateStrA = a["col6"] || ""
+    const dateStrB = b["col6"] || ""
     const dateA = parseDateFromDDMMYYYY(dateStrA)
     const dateB = parseDateFromDDMMYYYY(dateStrB)
-
-    // Handle cases where dates might be null or invalid
     if (!dateA) return 1
     if (!dateB) return -1
-
-    // Compare dates directly
     return dateA.getTime() - dateB.getTime()
   }
 
-  // Reset all filters
   const resetFilters = () => {
-    setSearchTerm("");
-    setSelectedMembers([]);
-    setStartDate("");
-    setEndDate("");
+    setSearchTerm("")
+    setSelectedMembers([])
+    setStartDate("")
+    setEndDate("")
   }
 
-  // Update filteredAccountData calculation
-  const filteredAccountData = searchTerm
-    ? accountData
-        .filter(account => 
-          Object.values(account).some(value => 
-            value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          )  
-        )
-        .sort(sortDateWise)
-    : accountData.sort(sortDateWise)
+  // Memoized filtered data to prevent unnecessary re-renders
+  const filteredAccountData = useMemo(() => {
+    const filtered = searchTerm
+      ? accountData.filter((account) =>
+        Object.values(account).some(
+          (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
+      )
+      : accountData
 
-  // Update filteredHistoryData calculation to include member and date filtering
-  const filteredHistoryData = historyData
-    .filter(item => {
-      // Text search filter
-      const matchesSearch = searchTerm ? 
-        Object.values(item).some(value => 
-          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        ) : true;
-      
-      // Member filter (Column E - index 4)
-      const matchesMember = selectedMembers.length > 0 ? 
-        selectedMembers.includes(item['col4']) : true;
-      
-      // Date range filter (Column M - index 12)
-      let matchesDateRange = true;
-      if (startDate || endDate) {
-        const itemDate = parseDateFromDDMMYYYY(item['col12']);
-        
-        if (!itemDate) return false;
-        
-        if (startDate) {
-          const startDateObj = new Date(startDate);
-          startDateObj.setHours(0, 0, 0, 0);
-          if (itemDate < startDateObj) matchesDateRange = false;
-        }
-        
-        if (endDate) {
-          const endDateObj = new Date(endDate);
-          endDateObj.setHours(23, 59, 59, 999);
-          if (itemDate > endDateObj) matchesDateRange = false;
-        }
-      }
-      
-      return matchesSearch && matchesMember && matchesDateRange;
-    })
-    .sort((a, b) => {
-      // Sort by submission date (Column M - index 12)
-      const dateStrA = a['col12'] || ''
-      const dateStrB = b['col12'] || ''
-      const dateA = parseDateFromDDMMYYYY(dateStrA)
-      const dateB = parseDateFromDDMMYYYY(dateStrB)
-      // Most recent first
-      if (!dateA) return 1
-      if (!dateB) return -1
-      return dateB.getTime() - dateA.getTime()
-    });
+    return filtered.sort(sortDateWise)
+  }, [accountData, searchTerm])
 
-  // Calculate task statistics for history view
+  const filteredHistoryData = useMemo(() => {
+    return historyData
+      .filter((item) => {
+        const matchesSearch = searchTerm
+          ? Object.values(item).some(
+            (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+          )
+          : true
+
+        const matchesMember = selectedMembers.length > 0 ? selectedMembers.includes(item["col4"]) : true
+
+        let matchesDateRange = true
+        if (startDate || endDate) {
+          const itemDate = parseDateFromDDMMYYYY(item["col10"])
+          if (!itemDate) return false
+
+          if (startDate) {
+            const startDateObj = new Date(startDate)
+            startDateObj.setHours(0, 0, 0, 0)
+            if (itemDate < startDateObj) matchesDateRange = false
+          }
+
+          if (endDate) {
+            const endDateObj = new Date(endDate)
+            endDateObj.setHours(23, 59, 59, 999)
+            if (itemDate > endDateObj) matchesDateRange = false
+          }
+        }
+
+        return matchesSearch && matchesMember && matchesDateRange
+      })
+      .sort((a, b) => {
+        const dateStrA = a["col10"] || ""
+        const dateStrB = b["col10"] || ""
+        const dateA = parseDateFromDDMMYYYY(dateStrA)
+        const dateB = parseDateFromDDMMYYYY(dateStrB)
+        if (!dateA) return 1
+        if (!dateB) return -1
+        return dateB.getTime() - dateA.getTime()
+      })
+  }, [historyData, searchTerm, selectedMembers, startDate, endDate])
+
   const getTaskStatistics = () => {
-    // Calculate total tasks completed
-    const totalCompleted = historyData.length;
-    
-    // If members are selected, calculate tasks by selected members
-    const memberStats = selectedMembers.length > 0 
-      ? selectedMembers.reduce((stats, member) => {
-          const memberTasks = historyData.filter(task => task['col4'] === member).length;
+    const totalCompleted = historyData.length
+    const memberStats =
+      selectedMembers.length > 0
+        ? selectedMembers.reduce((stats, member) => {
+          const memberTasks = historyData.filter((task) => task["col4"] === member).length
           return {
             ...stats,
-            [member]: memberTasks
-          };
+            [member]: memberTasks,
+          }
         }, {})
-      : {};
-    
-    // Calculate total of filtered tasks (when search and/or member filters are applied)
-    const filteredTotal = filteredHistoryData.length;
-    
+        : {}
+    const filteredTotal = filteredHistoryData.length
+
     return {
       totalCompleted,
       memberStats,
-      filteredTotal
-    };
-  };
+      filteredTotal,
+    }
+  }
 
-  // Handle member selection function with checkboxes
   const handleMemberSelection = (member) => {
-    setSelectedMembers(prev => {
-      // If member is already selected, remove it, otherwise add it
+    setSelectedMembers((prev) => {
       if (prev.includes(member)) {
-        return prev.filter(item => item !== member);
+        return prev.filter((item) => item !== member)
       } else {
-        return [...prev, member];
-      }
-    });
-  };
-
-  // Modified handleMarkMultipleDone function
- // Modified handleMarkMultipleDone function
- const handleMarkMultipleDone = async () => {
-  if (selectedHistoryItems.length === 0) {
-    setSuccessMessage("Please select at least one item to mark as done");
-    return;
-  }
-
-  if (markingAsDone) return;
-
-  // Open confirmation modal
-  setConfirmationModal({
-    isOpen: true,
-    itemCount: selectedHistoryItems.length
-  });
-}
-
-// Confirmation modal component
-const ConfirmationModal = ({ isOpen, itemCount, onConfirm, onCancel }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-        <div className="flex items-center justify-center mb-4">
-          <div className="bg-yellow-100 text-yellow-600 rounded-full p-3 mr-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-800">Mark Items as Done</h2>
-        </div>
-        
-        <p className="text-gray-600 text-center mb-6">
-          Are you sure you want to mark {itemCount} {itemCount === 1 ? 'item' : 'items'} as done?
-        </p>
-        
-        <div className="flex justify-center space-x-4">
-          <button 
-            onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={onConfirm}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Confirmation handler
-const confirmMarkDone = async () => {
-  // Close the modal
-  setConfirmationModal({ isOpen: false, itemCount: 0 });
-
-  setMarkingAsDone(true);
-  
-  try {
-    // Prepare submission data for multiple items
-    const submissionData = selectedHistoryItems.map(historyItem => ({
-      taskId: historyItem._id,
-      rowIndex: historyItem._rowIndex,
-      additionalInfo: "", // Additional info column (Column O)
-      imageData: null,    // No new image
-      imageUrl: "",       // Column P
-      todayDate: "",      // Column M
-      doneStatus: "DONE"  // Specifically for Column Q
-    }));
-    
-    const formData = new FormData();
-    formData.append('sheetName', 'SLAG CRUSHER');
-    formData.append('action', 'updateSalesData');
-    formData.append('rowData', JSON.stringify(submissionData));
-    
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: formData
-    });
-
-    const result = await response.json();
-    
-    if (result.success) {
-      // Remove the marked tasks from history data
-      setHistoryData(prev => prev.filter(item => 
-        !selectedHistoryItems.some(selectedItem => selectedItem._id === item._id)
-      ));
-      
-      // Clear selected items
-      setSelectedHistoryItems([]);
-      
-      setSuccessMessage(`Successfully marked ${selectedHistoryItems.length} items as done!`);
-      
-      // Refresh data after a short delay
-      setTimeout(() => {
-        fetchSheetData();
-      }, 2000);
-    } else {
-      throw new Error(result.error || "Failed to mark items as done");
-    }
-  } catch (error) {
-    console.error("Error marking tasks as done:", error);
-    setSuccessMessage(`Failed to mark tasks as done: ${error.message}`);
-  } finally {
-    setMarkingAsDone(false);
-  }
-}
-
-  // Fetch sheet data function
-  const fetchSheetData = async () => {
-    try {
-      setLoading(true);
-      // Clear existing data before fetching to prevent duplicates
-      const pendingAccounts = [];
-      const historyRows = [];
-      
-      const response = await fetch(`https://docs.google.com/spreadsheets/d/1OML53kwf2UBXyp6beojKt1Nhn-bUS8iu8I4-AUz9ngE/gviz/tq?tqx=out:json&sheet=SLAG CRUSHER`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`);
-      }
-      
-      const text = await response.text();
-      const jsonStart = text.indexOf('{');
-      const jsonEnd = text.lastIndexOf('}');
-      const jsonString = text.substring(jsonStart, jsonEnd + 1);
-      const data = JSON.parse(jsonString);
-      
-      const username = sessionStorage.getItem('username')
-      const userRole = sessionStorage.getItem('role')
-
-      // Extract headers
-      const headers = data.table.cols.map((col, index) => ({
-        id: `col${index}`,
-        label: col.label || `Column ${index + 1}`,
-        type: col.type
-      })).filter(header => header.label !== '');
-      
-      setSheetHeaders(headers);
-      
-      // Get today and tomorrow's dates
-      const today = new Date()
-      const tomorrow = new Date(today)
-      tomorrow.setDate(today.getDate() + 1)
-      
-      const todayStr = formatDateToDDMMYYYY(today)
-      const tomorrowStr = formatDateToDDMMYYYY(tomorrow)
-      
-      console.log("Filtering dates:", { todayStr, tomorrowStr })
-      
-      // Debugging array to track row filtering
-      const debugRows = [];
-      
-      // Track all unique members for filtering
-      const membersSet = new Set();
-      
-      // Process all rows
-      data.table.rows.forEach((row, rowIndex) => {
-        if (rowIndex === 0) return;
-        
-        // For non-admin users, filter by username in Column E (index 4)
-        const assignedTo = getCellValue(row, 4) || 'Unassigned';
-        membersSet.add(assignedTo); // Add to members list for dropdown
-        
-        const isUserMatch = userRole === 'admin' || 
-                            assignedTo.toLowerCase() === username.toLowerCase();
-        
-        // If not a match and not admin, skip this row
-        if (!isUserMatch && userRole !== 'admin') return;
-        
-        // Safely get values from columns L, M, P, and Q
-        const columnLValue = getCellValue(row, 11);
-        const columnMValue = getCellValue(row, 12);
-        const columnPValue = getCellValue(row, 15);
-        const columnQValue = getCellValue(row, 16);
-
-        // Skip rows marked as DONE in column Q
-        if (columnQValue && columnQValue.toString().trim() === 'DONE') {
-          return;
-        }
-        
-        // Convert column L value to string and format properly
-        let rowDateStr = columnLValue ? String(columnLValue).trim() : '';
-        let formattedRowDate = parseGoogleSheetsDate(rowDateStr);
-        
-        // Create row data object
-        const rowData = {
-          _id: Math.random().toString(36).substring(2, 15),  
-          _rowIndex: rowIndex + 2 // +2 for header row and 1-indexing
-        };
-        
-        // Populate row data dynamically with proper date formatting
-        headers.forEach((header, index) => {
-          const cellValue = getCellValue(row, index);
-          
-          // If this is a date column, format properly
-          if (header.type === 'date' || (cellValue && String(cellValue).startsWith('Date('))) {
-            rowData[header.id] = cellValue ? parseGoogleSheetsDate(String(cellValue)) : '';
-          } else if (header.type === 'number' && cellValue !== null && cellValue !== '') {
-            // Handle numeric values
-            rowData[header.id] = cellValue;
-          } else {
-            // Handle all other values
-            rowData[header.id] = cellValue !== null ? cellValue : '';
-          }
-        });
-        
-        // Check if column L is not null/empty and column M is null/empty
-        const hasColumnL = !isEmpty(columnLValue);
-        const isColumnMEmpty = isEmpty(columnMValue);
-        
-        // For pending tasks: Column L is not null and column M is null
-        if (hasColumnL && isColumnMEmpty) {
-          // Filter for today and tomorrow OR past dates
-          if (formattedRowDate === todayStr || 
-              formattedRowDate === tomorrowStr || 
-              (parseDateFromDDMMYYYY(formattedRowDate) <= today)) {
-            
-            debugRows.push({
-              rowIndex,
-              hasColumnL,
-              isColumnMEmpty,
-              formattedRowDate,
-              todayStr,
-              tomorrowStr,
-              matches: formattedRowDate === todayStr || formattedRowDate === tomorrowStr
-            });
-            
-            pendingAccounts.push(rowData);
-          }
-        } 
-        // For history: Both column L and M are not null
-        else if (hasColumnL && !isColumnMEmpty) {
-          historyRows.push(rowData);
-        }
-      });
-      
-      // Set debug information for display
-      setDebugInfo(debugRows);
-      
-      // Set members list from all unique values in column E
-      setMembersList(Array.from(membersSet).sort());
-      
-      // Set account data and history data separately to avoid duplication
-      setAccountData(pendingAccounts);
-      setHistoryData(historyRows);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching sheet data:", error);
-      setError("Failed to load account data");  
-      setLoading(false);
-    }
-  }
-
-  // Load data on component mount
-  useEffect(() => {
-    fetchSheetData()
-  }, [])
-
-  const handleSelectItem = (id) => {
-    setSelectedItems(prev => {
-      const isSelected = prev.includes(id)
-      if (isSelected) {
-        // When unselecting, remove additional data and remarks
-        const newAdditionalData = {...additionalData}
-        const newRemarksData = {...remarksData}
-        delete newAdditionalData[id]
-        delete newRemarksData[id]
-        setAdditionalData(newAdditionalData)
-        setRemarksData(newRemarksData)
-        return prev.filter(itemId => itemId !== id)
-      } else {
-        return [...prev, id]
+        return [...prev, member]
       }
     })
   }
 
-  // Handle image upload
+  const getFilteredMembersList = () => {
+    if (userRole === "admin") {
+      return membersList
+    } else {
+      return membersList.filter((member) => member.toLowerCase() === username.toLowerCase())
+    }
+  }
+
+  const fetchSheetData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const pendingAccounts = []
+      const historyRows = []
+
+      const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SHEET_NAME}&action=fetch`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status}`)
+      }
+
+      const text = await response.text()
+      let data
+
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        const jsonStart = text.indexOf("{")
+        const jsonEnd = text.lastIndexOf("}")
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const jsonString = text.substring(jsonStart, jsonEnd + 1)
+          data = JSON.parse(jsonString)
+        } else {
+          throw new Error("Invalid JSON response from server")
+        }
+      }
+
+      const currentUsername = sessionStorage.getItem("username")
+      const currentUserRole = sessionStorage.getItem("role")
+
+      const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(today.getDate() + 1)
+
+      const todayStr = formatDateToDDMMYYYY(today)
+      const tomorrowStr = formatDateToDDMMYYYY(tomorrow)
+
+      console.log("Filtering dates:", { todayStr, tomorrowStr })
+
+      const membersSet = new Set()
+
+      let rows = []
+      if (data.table && data.table.rows) {
+        rows = data.table.rows
+      } else if (Array.isArray(data)) {
+        rows = data
+      } else if (data.values) {
+        rows = data.values.map((row) => ({ c: row.map((val) => ({ v: val })) }))
+      }
+
+      rows.forEach((row, rowIndex) => {
+        if (rowIndex === 0) return
+
+        let rowValues = []
+        if (row.c) {
+          rowValues = row.c.map((cell) => (cell && cell.v !== undefined ? cell.v : ""))
+        } else if (Array.isArray(row)) {
+          rowValues = row
+        } else {
+          console.log("Unknown row format:", row)
+          return
+        }
+
+        const assignedTo = rowValues[4] || "Unassigned"
+        membersSet.add(assignedTo)
+
+        const isUserMatch = currentUserRole === "admin" || assignedTo.toLowerCase() === currentUsername.toLowerCase()
+        if (!isUserMatch && currentUserRole !== "admin") return
+
+        const columnGValue = rowValues[6]
+        const columnKValue = rowValues[10]
+        const columnMValue = rowValues[12]
+
+        if (columnMValue && columnMValue.toString().trim() === "DONE") {
+          return
+        }
+
+        const rowDateStr = columnGValue ? String(columnGValue).trim() : ""
+        const formattedRowDate = parseGoogleSheetsDate(rowDateStr)
+
+        const googleSheetsRowIndex = rowIndex + 1
+
+        // Create stable unique ID using task ID and row index
+        const taskId = rowValues[1] || ""
+        const stableId = taskId
+          ? `task_${taskId}_${googleSheetsRowIndex}`
+          : `row_${googleSheetsRowIndex}_${Math.random().toString(36).substring(2, 15)}`
+
+        const rowData = {
+          _id: stableId,
+          _rowIndex: googleSheetsRowIndex,
+          _taskId: taskId,
+        }
+
+        const columnHeaders = [
+          { id: "col0", label: "Timestamp", type: "string" },
+          { id: "col1", label: "Task ID", type: "string" },
+          { id: "col2", label: "Firm", type: "string" },
+          { id: "col3", label: "Given By", type: "string" },
+          { id: "col4", label: "Name", type: "string" },
+          { id: "col5", label: "Task Description", type: "string" },
+          { id: "col6", label: "Task Start Date", type: "date" },
+          { id: "col7", label: "Freq", type: "string" },
+          { id: "col8", label: "Enable Reminders", type: "string" },
+          { id: "col9", label: "Require Attachment", type: "string" },
+          { id: "col10", label: "Actual", type: "date" },
+          { id: "col11", label: "Column L", type: "string" },
+          { id: "col12", label: "Status", type: "string" },
+          { id: "col13", label: "Remarks", type: "string" },
+          { id: "col14", label: "Uploaded Image", type: "string" },
+        ]
+
+        columnHeaders.forEach((header, index) => {
+          const cellValue = rowValues[index]
+          if (header.type === "date" || (cellValue && String(cellValue).startsWith("Date("))) {
+            rowData[header.id] = cellValue ? parseGoogleSheetsDate(String(cellValue)) : ""
+          } else if (header.type === "number" && cellValue !== null && cellValue !== "") {
+            rowData[header.id] = cellValue
+          } else {
+            rowData[header.id] = cellValue !== null ? cellValue : ""
+          }
+        })
+
+        console.log(`Row ${rowIndex}: Task ID = ${rowData.col1}, Google Sheets Row = ${googleSheetsRowIndex}`)
+
+        const hasColumnG = !isEmpty(columnGValue)
+        const isColumnKEmpty = isEmpty(columnKValue)
+
+        if (hasColumnG && isColumnKEmpty) {
+          const rowDate = parseDateFromDDMMYYYY(formattedRowDate)
+          const isToday = formattedRowDate === todayStr
+          const isTomorrow = formattedRowDate === tomorrowStr
+          const isPastDate = rowDate && rowDate <= today
+
+          if (isToday || isTomorrow || isPastDate) {
+            pendingAccounts.push(rowData)
+          }
+        } else if (hasColumnG && !isColumnKEmpty) {
+          const isUserHistoryMatch =
+            currentUserRole === "admin" || assignedTo.toLowerCase() === currentUsername.toLowerCase()
+          if (isUserHistoryMatch) {
+            historyRows.push(rowData)
+          }
+        }
+      })
+
+      setMembersList(Array.from(membersSet).sort())
+      setAccountData(pendingAccounts)
+      setHistoryData(historyRows)
+      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching sheet data:", error)
+      setError("Failed to load account data: " + error.message)
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSheetData()
+  }, [fetchSheetData])
+
+  // Checkbox handlers with better state management
+  const handleSelectItem = useCallback((id, isChecked) => {
+    console.log(`Checkbox action: ${id} -> ${isChecked}`)
+
+    setSelectedItems((prev) => {
+      const newSelected = new Set(prev)
+
+      if (isChecked) {
+        newSelected.add(id)
+      } else {
+        newSelected.delete(id)
+        // Clean up related data when unchecking
+        setAdditionalData((prevData) => {
+          const newAdditionalData = { ...prevData }
+          delete newAdditionalData[id]
+          return newAdditionalData
+        })
+        setRemarksData((prevRemarks) => {
+          const newRemarksData = { ...prevRemarks }
+          delete newRemarksData[id]
+          return newRemarksData
+        })
+      }
+
+      console.log(`Updated selection: ${Array.from(newSelected)}`)
+      return newSelected
+    })
+  }, [])
+
+  const handleCheckboxClick = useCallback(
+    (e, id) => {
+      e.stopPropagation()
+      const isChecked = e.target.checked
+      console.log(`Checkbox clicked: ${id}, checked: ${isChecked}`)
+      handleSelectItem(id, isChecked)
+    },
+    [handleSelectItem],
+  )
+
+  const handleSelectAllItems = useCallback(
+    (e) => {
+      e.stopPropagation()
+      const checked = e.target.checked
+      console.log(`Select all clicked: ${checked}`)
+
+      if (checked) {
+        const allIds = filteredAccountData.map((item) => item._id)
+        setSelectedItems(new Set(allIds))
+        console.log(`Selected all items: ${allIds}`)
+      } else {
+        setSelectedItems(new Set())
+        setAdditionalData({})
+        setRemarksData({})
+        console.log("Cleared all selections")
+      }
+    },
+    [filteredAccountData],
+  )
+
   const handleImageUpload = async (id, e) => {
     const file = e.target.files[0]
     if (!file) return
-    
-    // SLAG CRUSHER file in state temporarily
-    setAccountData(prev => prev.map(item =>
-      item._id === id 
-        ? {...item, image: file}
-        : item  
-    ))
+
+    console.log(`Image upload for: ${id}`)
+    setAccountData((prev) => prev.map((item) => (item._id === id ? { ...item, image: file } : item)))
   }
 
-  // Convert file to base64
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = () => resolve(reader.result)
-      reader.onerror = error => reject(error)
+      reader.onerror = (error) => reject(error)
     })
   }
-  
-  // Handle toggle history view
+
   const toggleHistory = () => {
-    setShowHistory(prev => !prev)
-    resetFilters() // Reset all filters when toggling views
+    setShowHistory((prev) => !prev)
+    resetFilters()
   }
 
-  // Handle submit selected items  
+  // MAIN SUBMIT FUNCTION - CACHE MEMORY APPROACH
   const handleSubmit = async () => {
-    if (selectedItems.length === 0) {
-      alert("Please select at least one item to submit") 
+    const selectedItemsArray = Array.from(selectedItems)
+
+    if (selectedItemsArray.length === 0) {
+      alert("Please select at least one item to submit")
       return
     }
 
-    // Validate remarks for items with "No" status
-    const missingRemarks = selectedItems.filter(id => {
+    const missingRemarks = selectedItemsArray.filter((id) => {
       const additionalStatus = additionalData[id]
       const remarks = remarksData[id]
       return additionalStatus === "No" && (!remarks || remarks.trim() === "")
@@ -566,93 +473,156 @@ const confirmMarkDone = async () => {
       return
     }
 
-    // Check if any selected item requires an image but doesn't have one
-    const missingRequiredImages = selectedItems.filter(id => {
-      const item = accountData.find(account => account._id === id)
-      // Check if column K (index 10) has "YES" value and no image is uploaded
-      const requiresAttachment = item['col10'] && item['col10'].toUpperCase() === "YES"
+    const missingRequiredImages = selectedItemsArray.filter((id) => {
+      const item = accountData.find((account) => account._id === id)
+      const requiresAttachment = item["col9"] && item["col9"].toUpperCase() === "YES"
       return requiresAttachment && !item.image
     })
 
     if (missingRequiredImages.length > 0) {
-      alert(`Please upload images for all required attachments. ${missingRequiredImages.length} item(s) are missing required images.`)
+      alert(
+        `Please upload images for all required attachments. ${missingRequiredImages.length} item(s) are missing required images.`,
+      )
       return
     }
 
     setIsSubmitting(true)
-    
+
     try {
-      // Get today's date formatted as DD/MM/YYYY for column M
       const today = new Date()
       const todayFormatted = formatDateToDDMMYYYY(today)
-      
-      const submissionData = await Promise.all(selectedItems.map(async (id) => {
-        const item = accountData.find(account => account._id === id)
-        let imageData = null
-        
-        // If there's an image and it's a file (not a URL), convert to base64
-        if (item.image instanceof File) {
-          imageData = await fileToBase64(item.image)
-        }
-        
+
+      // Prepare submitted items for history BEFORE removing from pending
+      const submittedItemsForHistory = selectedItemsArray.map((id) => {
+        const item = accountData.find((account) => account._id === id)
         return {
-          taskId: id,
-          rowIndex: item._rowIndex,
-          additionalInfo: additionalData[id] || "",
-          remarks: remarksData[id] || "", // Include remarks for column P
-          imageData: imageData,
-          folderId: DRIVE_FOLDER_ID,
-          // Add today's date for column M (submission date)
-          todayDate: todayFormatted
+          ...item,
+          col10: todayFormatted, // Actual completion date
+          col12: additionalData[id] || "", // Status (Yes/No)
+          col13: remarksData[id] || "", // Remarks
+          col14: item.image ? (typeof item.image === "string" ? item.image : "") : "", // Image URL (will be updated after upload)
         }
-      }))
-      
+      })
+
+      // CACHE MEMORY UPDATE 1: Remove submitted items from pending table immediately
+      setAccountData((prev) => prev.filter((item) => !selectedItems.has(item._id)))
+
+      // CACHE MEMORY UPDATE 2: Add submitted items to history immediately
+      setHistoryData((prev) => [...submittedItemsForHistory, ...prev])
+
+      // Clear selections and form data immediately
+      setSelectedItems(new Set())
+      setAdditionalData({})
+      setRemarksData({})
+
+      // Show success message immediately
+      setSuccessMessage(`Successfully processed ${selectedItemsArray.length} task records! Tasks moved to history.`)
+
+      // Auto-clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage("")
+      }, 5000)
+
+      // Now handle the background submission to Google Sheets
+      const submissionData = await Promise.all(
+        selectedItemsArray.map(async (id) => {
+          const item = accountData.find((account) => account._id === id)
+
+          console.log(`Preparing submission for item:`, {
+            id: id,
+            taskId: item["col1"],
+            rowIndex: item._rowIndex,
+            expectedTaskId: item._taskId,
+          })
+
+          let imageUrl = ""
+
+          if (item.image instanceof File) {
+            try {
+              const base64Data = await fileToBase64(item.image)
+
+              const uploadFormData = new FormData()
+              uploadFormData.append("action", "uploadFile")
+              uploadFormData.append("base64Data", base64Data)
+              uploadFormData.append(
+                "fileName",
+                `task_${item["col1"]}_${Date.now()}.${item.image.name.split(".").pop()}`,
+              )
+              uploadFormData.append("mimeType", item.image.type)
+              uploadFormData.append("folderId", CONFIG.DRIVE_FOLDER_ID)
+
+              const uploadResponse = await fetch(CONFIG.APPS_SCRIPT_URL, {
+                method: "POST",
+                body: uploadFormData,
+              })
+
+              const uploadResult = await uploadResponse.json()
+              if (uploadResult.success) {
+                imageUrl = uploadResult.fileUrl
+
+                // Update the history data with the actual image URL
+                setHistoryData((prev) =>
+                  prev.map((historyItem) =>
+                    historyItem._id === id ? { ...historyItem, col14: imageUrl } : historyItem,
+                  ),
+                )
+              }
+            } catch (uploadError) {
+              console.error("Error uploading image:", uploadError)
+            }
+          }
+
+          return {
+            taskId: item["col1"],
+            rowIndex: item._rowIndex,
+            actualDate: todayFormatted,
+            status: additionalData[id] || "",
+            remarks: remarksData[id] || "",
+            imageUrl: imageUrl,
+          }
+        }),
+      )
+
+      console.log("Final submission data:", submissionData)
+
+      // Submit to Google Sheets in background
       const formData = new FormData()
-      formData.append('sheetName', 'SLAG CRUSHER')
-      formData.append('action', 'updateSalesData')
-      formData.append('rowData', JSON.stringify(submissionData))
-      
-      const response = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: formData
+      formData.append("sheetName", CONFIG.SHEET_NAME)
+      formData.append("action", "updateTaskData")
+      formData.append("rowData", JSON.stringify(submissionData))
+
+      const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        body: formData,
       })
 
       const result = await response.json()
-      
-      if (result.success) {
-        setAccountData(prev => prev.map(item =>
-          selectedItems.includes(item._id)
-            ? {...item, status: "completed", image: null}
-            : item
-        ))
-        
-        setSuccessMessage(`Successfully processed ${selectedItems.length} account records! Columns M, O and P updated.`)
-        setSelectedItems([])
-        setAdditionalData({})
-        setRemarksData({}) // Clear remarks data
-        
-        // Refresh data to see updated image URLs
-        setTimeout(() => {
-          fetchSheetData()
-        }, 2000)
-      } else {
-        throw new Error(result.error || "Submission failed")
+
+      if (!result.success) {
+        // If submission failed, we could optionally rollback the cache changes
+        console.error("Background submission failed:", result.error)
+        // For now, we'll just log the error but keep the UI updated
+        // You could implement rollback logic here if needed
       }
     } catch (error) {
       console.error("Submission error:", error)
-      alert("Failed to submit account records: " + error.message)
+      // Since we already updated the UI optimistically, we could rollback here
+      // For now, we'll just show an error but keep the UI changes
+      alert("Warning: There was an error with background submission, but your changes are saved locally.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  
+  // Convert Set to Array for display
+  const selectedItemsCount = selectedItems.size
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight text-purple-700">
-            {showHistory ? "Admin Data History" : "Admin Data"}
+            {showHistory ? CONFIG.PAGE_CONFIG.historyTitle : CONFIG.PAGE_CONFIG.title}
           </h1>
 
           <div className="flex space-x-4">
@@ -660,66 +630,46 @@ const confirmMarkDone = async () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder={showHistory ? "Search history..." : "Search transactions..."}
+                placeholder={showHistory ? "Search history..." : "Search tasks..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            
-            {/* History Toggle Button */}
-            {userRole === 'admin' && (
-              <button
-                onClick={toggleHistory}
-                className="rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 py-2 px-4 text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                {showHistory ? (
-                  <div className="flex items-center">
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    <span>Back to Tasks</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <History className="h-4 w-4 mr-1" />
-                    <span>View History</span>
-                  </div>
-                )}
-              </button>
-            )}
-            
-            {/* Submit Button - Only show when not in history view */}
+
+            <button
+              onClick={toggleHistory}
+              className="rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 py-2 px-4 text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              {showHistory ? (
+                <div className="flex items-center">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <span>Back to Tasks</span>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <History className="h-4 w-4 mr-1" />
+                  <span>View History</span>
+                </div>
+              )}
+            </button>
+
             {!showHistory && (
               <button
                 onClick={handleSubmit}
-                disabled={selectedItems.length === 0 || isSubmitting}
+                disabled={selectedItemsCount === 0 || isSubmitting}
                 className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 py-2 px-4 text-white hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Processing..." : `Submit Selected (${selectedItems.length})`}
+                {isSubmitting ? "Processing..." : `Submit Selected (${selectedItemsCount})`}
               </button>
-            )}
-            
-            {/* Submit Button for History View - Only show when items are selected */}
-            {showHistory && selectedHistoryItems.length > 0 && (
-              <div className="fixed top-40 right-10 z-50">
-                <button
-                  onClick={handleMarkMultipleDone}
-                  disabled={markingAsDone}
-                  className="rounded-md bg-green-600 text-white px-4 py-2 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {markingAsDone 
-                    ? "Processing..." 
-                    : `Mark ${selectedHistoryItems.length} Items as Done`
-                  }
-                </button>
-              </div>
             )}
           </div>
         </div>
-        
+
         {successMessage && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center justify-between">
             <div className="flex items-center">
-              <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />  
+              <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />
               {successMessage}
             </div>
             <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
@@ -727,68 +677,69 @@ const confirmMarkDone = async () => {
             </button>
           </div>
         )}
-        
+
         <div className="rounded-lg border border-purple-200 shadow-md bg-white overflow-hidden">
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 p-4">
             <h2 className="text-purple-700 font-medium">
-              {showHistory 
-                ? "Completed Admin Records" 
-                : "Admin Records"}
+              {showHistory ? `Completed ${CONFIG.SHEET_NAME} Tasks` : `Pending ${CONFIG.SHEET_NAME} Tasks`}
             </h2>
             <p className="text-purple-600 text-sm">
-              {showHistory 
-                ? "Showing all completed records with submission dates"
-                : "Showing today and tomorrow's records with pending submissions"
-              }
+              {showHistory
+                ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"} tasks`
+                : CONFIG.PAGE_CONFIG.description}
             </p>
           </div>
-            
+
           {loading ? (
             <div className="text-center py-10">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-              <p className="text-purple-600">Loading account data...</p>
+              <p className="text-purple-600">Loading task data...</p>
             </div>
           ) : error ? (
             <div className="bg-red-50 p-4 rounded-md text-red-800 text-center">
-              {error} <button className="underline ml-2" onClick={() => window.location.reload()}>Try again</button>
-            </div>  
+              {error}{" "}
+              <button className="underline ml-2" onClick={() => window.location.reload()}>
+                Try again
+              </button>
+            </div>
           ) : showHistory ? (
-            // History Table
             <>
-              {/* Filters Section */}
+              {/* History Filters */}
               <div className="p-4 border-b border-purple-100 bg-gray-50">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  {/* Member filter checkboxes */}
-                  <div className="flex flex-col">
-                    <div className="mb-2 flex items-center">
-                      <span className="text-sm font-medium text-purple-700">Filter by Member:</span>
+                  {getFilteredMembersList().length > 0 && (
+                    <div className="flex flex-col">
+                      <div className="mb-2 flex items-center">
+                        <span className="text-sm font-medium text-purple-700">Filter by Member:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+                        {getFilteredMembersList().map((member, idx) => (
+                          <div key={idx} className="flex items-center">
+                            <input
+                              id={`member-${idx}`}
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                              checked={selectedMembers.includes(member)}
+                              onChange={() => handleMemberSelection(member)}
+                            />
+                            <label htmlFor={`member-${idx}`} className="ml-2 text-sm text-gray-700">
+                              {member}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
-                      {membersList.map((member, idx) => (
-                        <div key={idx} className="flex items-center">
-                          <input
-                            id={`member-${idx}`}
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                            checked={selectedMembers.includes(member)}
-                            onChange={() => handleMemberSelection(member)}
-                          />
-                          <label htmlFor={`member-${idx}`} className="ml-2 text-sm text-gray-700">
-                            {member}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Date Range Filter */}
+                  )}
+
                   <div className="flex flex-col">
                     <div className="mb-2 flex items-center">
                       <span className="text-sm font-medium text-purple-700">Filter by Date Range:</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center">
-                        <label htmlFor="start-date" className="text-sm text-gray-700 mr-1">From</label>
+                        <label htmlFor="start-date" className="text-sm text-gray-700 mr-1">
+                          From
+                        </label>
                         <input
                           id="start-date"
                           type="date"
@@ -798,7 +749,9 @@ const confirmMarkDone = async () => {
                         />
                       </div>
                       <div className="flex items-center">
-                        <label htmlFor="end-date" className="text-sm text-gray-700 mr-1">To</label>
+                        <label htmlFor="end-date" className="text-sm text-gray-700 mr-1">
+                          To
+                        </label>
                         <input
                           id="end-date"
                           type="date"
@@ -809,25 +762,19 @@ const confirmMarkDone = async () => {
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Clear Filters Button */}
+
                   {(selectedMembers.length > 0 || startDate || endDate || searchTerm) && (
-                    <button 
+                    <button
                       onClick={resetFilters}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm">
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+                    >
                       Clear All Filters
                     </button>
                   )}
                 </div>
               </div>
-              <ConfirmationModal 
-          isOpen={confirmationModal.isOpen}
-          itemCount={confirmationModal.itemCount}
-          onConfirm={confirmMarkDone}
-          onCancel={() => setConfirmationModal({ isOpen: false, itemCount: 0 })}
-        />
-              
-              {/* Task Completion Statistics */}
+
+              {/* Task Statistics */}
               <div className="p-4 border-b border-purple-100 bg-blue-50">
                 <div className="flex flex-col">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Task Completion Statistics:</h3>
@@ -836,128 +783,152 @@ const confirmMarkDone = async () => {
                       <span className="text-xs text-gray-500">Total Completed</span>
                       <div className="text-lg font-semibold text-blue-600">{getTaskStatistics().totalCompleted}</div>
                     </div>
-                    
+
                     {(selectedMembers.length > 0 || startDate || endDate || searchTerm) && (
                       <div className="px-3 py-2 bg-white rounded-md shadow-sm">
                         <span className="text-xs text-gray-500">Filtered Results</span>
                         <div className="text-lg font-semibold text-blue-600">{getTaskStatistics().filteredTotal}</div>
                       </div>
                     )}
-                    
-                    {/* Individual member stats */}
-                    {selectedMembers.map(member => (
+
+                    {selectedMembers.map((member) => (
                       <div key={member} className="px-3 py-2 bg-white rounded-md shadow-sm">
                         <span className="text-xs text-gray-500">{member}</span>
-                        <div className="text-lg font-semibold text-indigo-600">{getTaskStatistics().memberStats[member]}</div>
+                        <div className="text-lg font-semibold text-indigo-600">
+                          {getTaskStatistics().memberStats[member]}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* History Table - Single scroll container */}
+              <div className="h-[calc(100vh-300px)] overflow-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                      {/* Add checkbox column as first column */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                          checked={filteredHistoryData.length > 0 && selectedHistoryItems.length === filteredHistoryData.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedHistoryItems(filteredHistoryData)
-                            } else {
-                              setSelectedHistoryItems([])
-                            }
-                          }}
-                        />
+                        Task ID
                       </th>
-                      {/* Render headers for columns B to P - EXCLUDE column N and Q */}
-                      {sheetHeaders.slice(1, 13).map((header) => (
-                        <th 
-                          key={header.id} 
-                          className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-                            ${header.id === 'col11' ? 'bg-yellow-50' : ''}
-                            ${header.id === 'col12' ? 'bg-green-50' : ''}
-                          `}
-                        >
-                          {header.label}
-                        </th>
-                      ))}
-                      
-                      {/* Skip column N (index 13) and show O and P */}
-                      {sheetHeaders.slice(14, 16).map((header) => (
-                        <th 
-                          key={header.id} 
-                          className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-                            ${header.id === 'col14' ? 'bg-blue-50' : ''}
-                            ${header.id === 'col15' ? 'bg-purple-50' : ''}
-                          `}
-                        >
-                          {header.label}
-                        </th>
-                      ))}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Shop Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Given By
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                        Task Start Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Freq
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Enable Reminders
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Require Attachment
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                        Actual Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-50">
+                        Remarks
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Attachment
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredHistoryData.length > 0 ? (
                       filteredHistoryData.map((history) => (
                         <tr key={history._id} className="hover:bg-gray-50">
-                          {/* Add checkbox in first column */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                              checked={selectedHistoryItems.some(item => item._id === history._id)}
-                              onChange={() => {
-                                setSelectedHistoryItems(prev => 
-                                  prev.some(item => item._id === history._id)
-                                    ? prev.filter(item => item._id !== history._id)
-                                    : [...prev, history]
-                                );
-                              }}
-                            />
+                            <div className="text-sm font-medium text-gray-900">{history["col1"] || "—"}</div>
                           </td>
-                          {/* Render data for columns B to M */}
-                          {sheetHeaders.slice(1, 13).map((header) => (
-                            <td 
-                              key={header.id} 
-                              className={`px-6 py-4 whitespace-nowrap
-                                ${header.id === 'col11' ? 'bg-yellow-50' : ''}
-                                ${header.id === 'col12' ? 'bg-green-50' : ''}
-                              `}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col2"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col3"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col4"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 max-w-xs" title={history["col5"]}>
+                              {history["col5"] || "—"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+                            <div className="text-sm text-gray-900">{history["col6"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col7"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col8"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{history["col9"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-green-50">
+                            <div className="text-sm font-medium text-gray-900">{history["col10"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-blue-50">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${history["col12"] === "Yes"
+                                ? "bg-green-100 text-green-800"
+                                : history["col12"] === "No"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                                }`}
                             >
-                              <div className="text-sm text-gray-900">
-                                {history[header.id] || '—'}
-                              </div>
-                            </td>
-                          ))}
-                          
-                          {/* Skip column N (index 13) and show O and P */}
-                          {sheetHeaders.slice(14, 16).map((header) => (
-                            <td 
-                              key={header.id} 
-                              className={`px-6 py-4 whitespace-nowrap
-                                ${header.id === 'col14' ? 'bg-blue-50' : ''}
-                                ${header.id === 'col15' ? 'bg-purple-50' : ''}
-                              `}
-                            >
-                              <div className="text-sm text-gray-900">
-                                {history[header.id] || '—'}
-                              </div>
-                            </td>
-                          ))}
+                              {history["col12"] || "—"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 bg-purple-50">
+                            <div className="text-sm text-gray-900 max-w-xs" title={history["col13"]}>
+                              {history["col13"] || "—"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {history["col14"] ? (
+                              <a
+                                href={history["col14"]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 underline flex items-center"
+                              >
+                                <img
+                                  src={history["col14"] || "/placeholder.svg?height=32&width=32"}
+                                  alt="Attachment"
+                                  className="h-8 w-8 object-cover rounded-md mr-2"
+                                />
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">No attachment</span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={sheetHeaders.length + 1} className="px-6 py-4 text-center text-gray-500"> 
-                          {(searchTerm || selectedMembers.length > 0 || startDate || endDate)
-                            ? "No historical records matching your filters" 
-                            : "No completed records found"
-                          }
+                        <td colSpan={13} className="px-6 py-4 text-center text-gray-500">
+                          {searchTerm || selectedMembers.length > 0 || startDate || endDate
+                            ? "No historical records matching your filters"
+                            : "No completed records found"}
                         </td>
                       </tr>
                     )}
@@ -966,35 +937,46 @@ const confirmMarkDone = async () => {
               </div>
             </>
           ) : (
-            // Regular Tasks Table
-            <div className="overflow-x-auto">
+            /* Regular Tasks Table - Single scroll container */
+            <div className="h-[calc(100vh-250px)] overflow-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                        checked={filteredAccountData.length > 0 && selectedItems.length === filteredAccountData.length}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedItems(filteredAccountData.map(item => item._id))
-                          } else {
-                            setSelectedItems([])
-                            setAdditionalData({})
-                          }
-                        }}
+                        checked={filteredAccountData.length > 0 && selectedItems.size === filteredAccountData.length}
+                        onChange={handleSelectAllItems}
                       />
                     </th>
-                    {/* Render headers for columns B to K */}
-                    {sheetHeaders.slice(1, 11).map((header) => (
-                      <th 
-                        key={header.id} 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        {header.label}
-                      </th>
-                    ))}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Task ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Shop Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Given By
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Task Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                      Task Start Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Freq
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Enable Reminders
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Require Attachment
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
@@ -1008,106 +990,138 @@ const confirmMarkDone = async () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredAccountData.length > 0 ? (
-                    filteredAccountData.map((account) => (
-                      <tr
-                        key={account._id}
-                        className={`${selectedItems.includes(account._id) ? "bg-purple-50" : ""} hover:bg-gray-50`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                            checked={selectedItems.includes(account._id)}
-                            onChange={() => handleSelectItem(account._id)}
-                          />
-                        </td>
-                        {/* Render data for columns B to K */}
-                        {sheetHeaders.slice(1, 11).map((header) => (
-                          <td key={header.id} className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account[header.id] || '—'}
-                            </div>
+                    filteredAccountData.map((account) => {
+                      const isSelected = selectedItems.has(account._id)
+                      return (
+                        <tr key={account._id} className={`${isSelected ? "bg-purple-50" : ""} hover:bg-gray-50`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                              checked={isSelected}
+                              onChange={(e) => handleCheckboxClick(e, account._id)}
+                            />
                           </td>
-                        ))}
-                         <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
-                      <select
-                        disabled={!selectedItems.includes(account._id)}
-                        value={additionalData[account._id] || ""}
-                        onChange={(e) => {
-                          setAdditionalData(prev => ({...prev, [account._id]: e.target.value}));
-                          // Reset remarks if status changes
-                          if (e.target.value !== "No") {
-                            setRemarksData(prev => {
-                              const newData = {...prev};
-                              delete newData[account._id];
-                              return newData;
-                            });
-                          }
-                        }}
-                        className="border border-gray-300 rounded-md px-2 py-1 w-full disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Select...</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap bg-orange-50">
-  <input
-    type="text"
-    placeholder="Enter remarks"
-    disabled={!selectedItems.includes(account._id) || !additionalData[account._id]}
-    value={remarksData[account._id] || ""}
-    onChange={(e) => setRemarksData(prev => ({...prev, [account._id]: e.target.value}))}
-    className="border rounded-md px-2 py-1 w-full border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-  />
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col1"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col2"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col3"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col4"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4">
+  <div className="text-sm text-gray-900 max-w-xs break-words whitespace-normal">
+    {account["col5"] || "—"}
+  </div>
 </td>
-                        <td className="px-6 py-4 whitespace-nowrap bg-green-50">
-                          {account.image ? (
-                            <div className="flex items-center">
-                              <img
-                                src={typeof account.image === 'string' ? account.image : URL.createObjectURL(account.image)}
-                                alt="Receipt"
-                                className="h-10 w-10 object-cover rounded-md mr-2"
-                              />
-                              <div className="flex flex-col">
-                                <span className="text-xs text-gray-500">
-                                  {account.image instanceof File ? account.image.name : "Uploaded Receipt"}
-                                </span>
-                                {account.image instanceof File ? (
-                                  <span className="text-xs text-green-600">Ready to upload</span>
-                                ) : (
-                                  <button
-                                    className="text-xs text-purple-600 hover:text-purple-800"
-                                    onClick={() => window.open(account.image, "_blank")}
-                                  >
-                                    View Full Image
-                                  </button>
-                                )}
+                          <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+                            <div className="text-sm text-gray-900">{account["col6"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col7"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col8"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{account["col9"] || "—"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+                            <select
+                              disabled={!isSelected}
+                              value={additionalData[account._id] || ""}
+                              onChange={(e) => {
+                                setAdditionalData((prev) => ({ ...prev, [account._id]: e.target.value }))
+                                if (e.target.value !== "No") {
+                                  setRemarksData((prev) => {
+                                    const newData = { ...prev }
+                                    delete newData[account._id]
+                                    return newData
+                                  })
+                                }
+                              }}
+                              className="border border-gray-300 rounded-md px-2 py-1 w-full disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                              <option value="">Select...</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-orange-50">
+                            <input
+                              type="text"
+                              placeholder="Enter remarks"
+                              disabled={!isSelected || !additionalData[account._id]}
+                              value={remarksData[account._id] || ""}
+                              onChange={(e) => setRemarksData((prev) => ({ ...prev, [account._id]: e.target.value }))}
+                              className="border rounded-md px-2 py-1 w-full border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap bg-green-50">
+                            {account.image ? (
+                              <div className="flex items-center">
+                                <img
+                                  src={
+                                    typeof account.image === "string"
+                                      ? account.image
+                                      : URL.createObjectURL(account.image)
+                                  }
+                                  alt="Receipt"
+                                  className="h-10 w-10 object-cover rounded-md mr-2"
+                                />
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">
+                                    {account.image instanceof File ? account.image.name : "Uploaded Receipt"}
+                                  </span>
+                                  {account.image instanceof File ? (
+                                    <span className="text-xs text-green-600">Ready to upload</span>
+                                  ) : (
+                                    <button
+                                      className="text-xs text-purple-600 hover:text-purple-800"
+                                      onClick={() => window.open(account.image, "_blank")}
+                                    >
+                                      View Full Image
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ) : (
-                            <label className={`flex items-center cursor-pointer ${account['col10']?.toUpperCase() === "YES" ? "text-red-600 font-medium" : "text-purple-600"} hover:text-purple-800`}>
-                              <Upload className="h-4 w-4 mr-1" />
-                              <span className="text-xs">
-                                {account['col10']?.toUpperCase() === "YES" ? "Required Upload" : "Upload Receipt Image"}
-                                {account['col10']?.toUpperCase() === "YES" && <span className="text-red-500 ml-1">*</span>}
-                              </span>
-                              <input
-                                type="file" 
-                                className="hidden"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(account._id, e)}
-                                disabled={!selectedItems.includes(account._id)}
-                              />
-                            </label>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                            ) : (
+                              <label
+                                className={`flex items-center cursor-pointer ${account["col9"]?.toUpperCase() === "YES" ? "text-red-600 font-medium" : "text-purple-600"} hover:text-purple-800`}
+                              >
+                                <Upload className="h-4 w-4 mr-1" />
+                                <span className="text-xs">
+                                  {account["col9"]?.toUpperCase() === "YES"
+                                    ? "Required Upload"
+                                    : "Upload Receipt Image"}
+                                  {account["col9"]?.toUpperCase() === "YES" && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </span>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={(e) => handleImageUpload(account._id, e)}
+                                  disabled={!isSelected}
+                                />
+                              </label>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={sheetHeaders.length + 3} className="px-6 py-4 text-center text-gray-500"> 
-                        {searchTerm ? "No transactions matching your search" : "No pending account records found for today or tomorrow"}
+                      <td colSpan={13} className="px-6 py-4 text-center text-gray-500">
+                        {searchTerm
+                          ? "No tasks matching your search"
+                          : "No pending tasks found for today, tomorrow, or past due dates"}
                       </td>
                     </tr>
                   )}

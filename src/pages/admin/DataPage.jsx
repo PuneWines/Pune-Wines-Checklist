@@ -31,8 +31,8 @@ export default function DataPage() {
       return <AdminDataPage/>
     case "sales":
       return <SalesDataPage />
-    // case "service":
-    //   return <ServiceDataPage />
+    case "service":
+      return <ServiceDataPage />
     // case "jockey":
     //   return <JockeyDataPage />
     case "account":

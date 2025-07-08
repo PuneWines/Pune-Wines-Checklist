@@ -144,7 +144,8 @@ const addYears = (date, years) => {
 
 export default function AssignTask() {
   const [date, setSelectedDate] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const [time, setTime] = useState("09:00"); // Add this line
+const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedTasks, setGeneratedTasks] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(false);
@@ -154,6 +155,7 @@ export default function AssignTask() {
   const [givenByOptions, setGivenByOptions] = useState([]);
   const [allDoerOptions, setAllDoerOptions] = useState([]);
   const [filteredDoerOptions, setFilteredDoerOptions] = useState([]);
+  
 
   const frequencies = [
     { value: "one-time", label: "One Time (No Recurrence)" },
@@ -296,6 +298,7 @@ export default function AssignTask() {
     if (!date) return "Select a date";
     return formatDate(date);
   };
+  
 
   useEffect(() => {
     fetchMasterSheetOptions();
@@ -342,13 +345,18 @@ export default function AssignTask() {
   };
 
   // Add this date formatting helper function
-  const formatDateToDDMMYYYY = (date) => {
-    const d = new Date(date);
-    const day = d.getDate().toString().padStart(2, "0");
-    const month = (d.getMonth() + 1).toString().padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+// Add this date formatting helper function
+const formatDateToDDMMYYYY = (date, time = null) => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+  
+  if (time) {
+    return `${day}/${month}/${year} ${time}`;
+  }
+  return `${day}/${month}/${year}`;
+};
 
   // Function to fetch working days from the Working Day Calendar sheet
   const fetchWorkingDays = async () => {
@@ -560,7 +568,8 @@ export default function AssignTask() {
         department: formData.department,
         givenBy: formData.givenBy,
         doer: formData.doer,
-        dueDate: taskDateStr,
+        // dueDate: taskDateStr,
+        dueDate: `${taskDateStr} ${time}`,
         status: "pending",
         frequency: formData.frequency,
         enableReminders: formData.enableReminders,
@@ -579,7 +588,8 @@ export default function AssignTask() {
           department: formData.department,
           givenBy: formData.givenBy,
           doer: formData.doer,
-          dueDate: taskDateStr,
+          dueDate: `${taskDateStr} ${time}`, // Changed this line
+          // dueDate: taskDateStr,
           status: "pending",
           frequency: formData.frequency,
           enableReminders: formData.enableReminders,
@@ -711,82 +721,81 @@ export default function AssignTask() {
   };
 
   // Updated handleSubmit function with proper sheet selection logic
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // Updated handleSubmit function with shop-based sheet selection logic
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      if (generatedTasks.length === 0) {
-        alert("Please generate tasks first by clicking Preview Generated Tasks");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Determine the sheet based on frequency:
-      // - "one-time" frequency → DELEGATION sheet (department doesn't matter)
-      // - All other frequencies → Checklist sheet
-      const submitSheetName = formData.frequency === "one-time" ? "DELEGATION" : "Checklist";
-
-      // Get the last task ID from the appropriate sheet
-      const lastTaskId = await getLastTaskId(submitSheetName);
-      let nextTaskId = lastTaskId + 1;
-
-      // Prepare all tasks data for batch insertion
-      const tasksData = generatedTasks.map((task, index) => ({
-        timestamp: formatDateToDDMMYYYY(new Date()),
-        taskId: (nextTaskId + index).toString(),
-        firm: task.department,                    // Maps to Column C
-        givenBy: task.givenBy,                    // Maps to Column D
-        name: task.doer,                          // Maps to Column E
-        description: task.description,            // Maps to Column F
-        startDate: task.dueDate,                  // Maps to Column G
-        freq: task.frequency,                     // Maps to Column H
-        enableReminders: task.enableReminders ? "Yes" : "No",    // Maps to Column I
-        requireAttachment: task.requireAttachment ? "Yes" : "No"  // Maps to Column J
-      }));
-
-      console.log(`Submitting ${tasksData.length} tasks in batch to ${submitSheetName} sheet:`, tasksData);
-
-      // Submit all tasks in one batch to Google Sheets
-      const formPayload = new FormData();
-      formPayload.append("sheetName", submitSheetName);
-      formPayload.append("action", "insert");
-      formPayload.append("batchInsert", "true");
-      formPayload.append("rowData", JSON.stringify(tasksData));
-
-      await fetch(
-        "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec",
-        {
-          method: "POST",
-          body: formPayload,
-          mode: "no-cors",
-        }
-      );
-
-      // Show a success message with the appropriate sheet name
-      alert(`Successfully submitted ${generatedTasks.length} tasks to ${submitSheetName} sheet in one batch!`);
-
-      // Reset form
-      setFormData({
-        department: "",
-        givenBy: "",
-        doer: "",
-        description: "",
-        frequency: "daily",
-        enableReminders: true,
-        requireAttachment: false
-      });
-      setSelectedDate(null);
-      setGeneratedTasks([]);
-      setAccordionOpen(false);
-      setFilteredDoerOptions([]);
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to assign tasks. Please try again.");
-    } finally {
+  try {
+    if (generatedTasks.length === 0) {
+      alert("Please generate tasks first by clicking Preview Generated Tasks");
       setIsSubmitting(false);
+      return;
     }
-  };
+
+    // NEW LOGIC: Use the selected shop name as the sheet name
+    const submitSheetName = formData.department; // This will be the shop name like "Balaji"
+
+    // Get the last task ID from the shop-specific sheet
+    const lastTaskId = await getLastTaskId(submitSheetName);
+    let nextTaskId = lastTaskId + 1;
+
+    // Prepare all tasks data for batch insertion
+// Prepare all tasks data for batch insertion
+const tasksData = generatedTasks.map((task, index) => ({
+  timestamp: formatDateToDDMMYYYY(new Date(), time), // Changed this line
+  taskId: (nextTaskId + index).toString(),
+  firm: task.department,
+  givenBy: task.givenBy,
+  name: task.doer,
+  description: task.description,
+  startDate: task.dueDate, // This already includes time from generateTasks
+  freq: task.frequency,
+  enableReminders: task.enableReminders ? "Yes" : "No",
+  requireAttachment: task.requireAttachment ? "Yes" : "No"
+}));
+    console.log(`Submitting ${tasksData.length} tasks in batch to ${submitSheetName} sheet:`, tasksData);
+
+    // Submit all tasks in one batch to Google Sheets
+    const formPayload = new FormData();
+    formPayload.append("sheetName", submitSheetName);
+    formPayload.append("action", "insert");
+    formPayload.append("batchInsert", "true");
+    formPayload.append("rowData", JSON.stringify(tasksData));
+
+    await fetch(
+      "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec",
+      {
+        method: "POST",
+        body: formPayload,
+        mode: "no-cors",
+      }
+    );
+
+    // Show a success message with the shop sheet name
+    alert(`Successfully submitted ${generatedTasks.length} tasks to ${submitSheetName} sheet in one batch!`);
+
+    // Reset form
+    setFormData({
+      department: "",
+      givenBy: "",
+      doer: "",
+      description: "",
+      frequency: "daily",
+      enableReminders: true,
+      requireAttachment: false
+    });
+    setSelectedDate(null);
+    setGeneratedTasks([]);
+    setAccordionOpen(false);
+    setFilteredDoerOptions([]);
+  } catch (error) {
+    console.error("Submission error:", error);
+    alert("Failed to assign tasks. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <AdminLayout>
@@ -904,55 +913,71 @@ export default function AssignTask() {
               </div>
 
               {/* Date and Frequency */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-purple-700">
-                    Task Start Date
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowCalendar(!showCalendar)}
-                      className="w-full flex justify-start items-center rounded-md border border-purple-200 p-2 text-left focus:outline-none focus:ring-1 focus:ring-purple-500"
-                    >
-                      <Calendar className="mr-2 h-4 w-4 text-purple-500" />
-                      {date ? getFormattedDate(date) : "Select a date"}
-                    </button>
-                    {showCalendar && (
-                      <div className="absolute z-10 mt-1">
-                        <CalendarComponent
-                          date={date}
-                          onChange={setSelectedDate}
-                          onClose={() => setShowCalendar(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+{/* Date, Time and Frequency */}
+<div className="grid gap-4 md:grid-cols-3">
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-purple-700">
+      Task Start Date
+    </label>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setShowCalendar(!showCalendar)}
+        className="w-full flex justify-start items-center rounded-md border border-purple-200 p-2 text-left focus:outline-none focus:ring-1 focus:ring-purple-500"
+      >
+        <Calendar className="mr-2 h-4 w-4 text-purple-500" />
+        {date ? getFormattedDate(date) : "Select a date"}
+      </button>
+      {showCalendar && (
+        <div className="absolute z-10 mt-1">
+          <CalendarComponent
+            date={date}
+            onChange={setSelectedDate}
+            onClose={() => setShowCalendar(false)}
+          />
+        </div>
+      )}
+    </div>
+  </div>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="frequency"
-                    className="block text-sm font-medium text-purple-700"
-                  >
-                    Frequency
-                  </label>
-                  <select
-                    id="frequency"
-                    name="frequency"
-                    value={formData.frequency}
-                    onChange={handleChange}
-                    className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  >
-                    {frequencies.map((freq) => (
-                      <option key={freq.value} value={freq.value}>
-                        {freq.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+  <div className="space-y-2">
+    <label
+      htmlFor="time"
+      className="block text-sm font-medium text-purple-700"
+    >
+      Task Start Time
+    </label>
+    <input
+      type="time"
+      id="time"
+      value={time}
+      onChange={(e) => setTime(e.target.value)}
+      className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+    />
+  </div>
 
+  <div className="space-y-2">
+    <label
+      htmlFor="frequency"
+      className="block text-sm font-medium text-purple-700"
+    >
+      Frequency
+    </label>
+    <select
+      id="frequency"
+      name="frequency"
+      value={formData.frequency}
+      onChange={handleChange}
+      className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+    >
+      {frequencies.map((freq) => (
+        <option key={freq.value} value={freq.value}>
+          {freq.label}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
               {/* Additional Options */}
               <div className="space-y-4 pt-2 border-t border-purple-100">
                 <h3 className="text-lg font-medium text-purple-700 pt-2">
