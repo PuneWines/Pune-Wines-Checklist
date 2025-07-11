@@ -742,28 +742,61 @@ export default function AdminDashboard() {
   }
 
   // Staff Tasks Table Component
+  // Staff Tasks Table Component
   const StaffTasksTable = () => {
+    // Get today's date for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate staff tasks excluding upcoming tasks
+    const staffMembersWithCurrentTasks = departmentData.staffMembers.map(staff => {
+      // Filter tasks assigned to this staff member that are not upcoming (due today or before)
+      const staffTasks = departmentData.allTasks.filter(task => {
+        const taskDate = parseDateFromDDMMYYYY(task.taskStartDate);
+        return task.assignedTo === staff.name && taskDate && taskDate <= today;
+      });
+      
+      const completedTasks = staffTasks.filter(task => task.status === 'completed').length;
+      const totalTasks = staffTasks.length;
+      const pendingTasks = totalTasks - completedTasks;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      return {
+        ...staff,
+        totalTasks,
+        completedTasks,
+        pendingTasks,
+        progress
+      };
+    });
+
     return (
       <div className="rounded-md border border-gray-200 overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Tasks
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Completed
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Pending
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Progress
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {departmentData.staffMembers.map((staff) => (
+            {staffMembersWithCurrentTasks.map((staff) => (
               <tr key={staff.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
@@ -802,8 +835,8 @@ export default function AdminDashboard() {
           </tbody>
         </table>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <AdminLayout>
