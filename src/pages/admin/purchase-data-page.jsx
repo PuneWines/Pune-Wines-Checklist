@@ -1,7 +1,7 @@
 //Checklist Tasks Page
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { CheckCircle2, Upload, X, Search, History, ArrowLeft } from "lucide-react"
 import AdminLayout from "../../components/layout/AdminLayout"
 
@@ -44,6 +44,71 @@ function AccountDataPage() {
   const [endDate, setEndDate] = useState("")
   const [userRole, setUserRole] = useState("")
   const [username, setUsername] = useState("")
+
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [currentCameraAccountId, setCurrentCameraAccountId] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  
+  // Add these functions to your component
+  const startCamera = async (accountId) => {
+    try {
+      setCurrentCameraAccountId(accountId);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+      });
+      
+      setCameraStream(stream);
+      setCameraModalOpen(true);
+      
+      // Add a slight delay to ensure modal is open before assigning stream
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play().catch(err => console.error("Video play error:", err));
+          };
+        }
+      }, 100);
+      
+    } catch (err) {
+      console.error("Camera error:", err);
+      // Fallback to file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.onchange = (e) => handleImageUpload(accountId, e);
+      input.click();
+    }
+  };
+  
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setCameraModalOpen(false);
+  };
+  
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob((blob) => {
+        const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const fakeEvent = { target: { files: [file] } };
+        handleImageUpload(currentCameraAccountId, fakeEvent);
+        stopCamera();
+      }, 'image/jpeg', 0.9);
+    }
+  };
 
   const formatDateToDDMMYYYY = (date) => {
     const day = date.getDate().toString().padStart(2, "0")
@@ -1063,56 +1128,149 @@ function AccountDataPage() {
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap bg-green-50">
-                            {account.image ? (
-                              <div className="flex items-center">
-                                <img
-                                  src={
-                                    typeof account.image === "string"
-                                      ? account.image
-                                      : URL.createObjectURL(account.image)
-                                  }
-                                  alt="Receipt"
-                                  className="h-10 w-10 object-cover rounded-md mr-2"
-                                />
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-500">
-                                    {account.image instanceof File ? account.image.name : "Uploaded Receipt"}
-                                  </span>
-                                  {account.image instanceof File ? (
-                                    <span className="text-xs text-green-600">Ready to upload</span>
-                                  ) : (
-                                    <button
-                                      className="text-xs text-purple-600 hover:text-purple-800"
-                                      onClick={() => window.open(account.image, "_blank")}
-                                    >
-                                      View Full Image
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <label
-                                className={`flex items-center cursor-pointer ${account["col9"]?.toUpperCase() === "YES" ? "text-red-600 font-medium" : "text-purple-600"} hover:text-purple-800`}
-                              >
-                                <Upload className="h-4 w-4 mr-1" />
-                                <span className="text-xs">
-                                  {account["col9"]?.toUpperCase() === "YES"
-                                    ? "Required Upload"
-                                    : "Upload Receipt Image"}
-                                  {account["col9"]?.toUpperCase() === "YES" && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </span>
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  accept="image/*"
-                                  onChange={(e) => handleImageUpload(account._id, e)}
-                                  disabled={!isSelected}
-                                />
-                              </label>
-                            )}
-                          </td>
+  {account.image ? (
+    <div className="flex items-center">
+      <img
+        src={
+          typeof account.image === "string"
+            ? account.image
+            : URL.createObjectURL(account.image)
+        }
+        alt="Receipt"
+        className="h-10 w-10 object-cover rounded-md mr-2"
+      />
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-500">
+          {account.image instanceof File ? account.image.name : "Uploaded Receipt"}
+        </span>
+        {account.image instanceof File ? (
+          <span className="text-xs text-green-600">Ready to upload</span>
+        ) : (
+          <button
+            className="text-xs text-purple-600 hover:text-purple-800"
+            onClick={() => window.open(account.image, "_blank")}
+          >
+            View Full Image
+          </button>
+        )}
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-col space-y-2">
+      {/* Camera Capture Button */}
+      <button
+        type="button"
+        onClick={() => startCamera(account._id)}
+        disabled={!isSelected}
+        className={`flex items-center justify-center p-1 rounded-md ${account["col9"]?.toUpperCase() === "YES" 
+          ? "bg-red-100 text-red-600" 
+          : "bg-purple-100 text-purple-600"} hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5 mr-1"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+        <span className="text-xs">Take Photo</span>
+      </button>
+
+      {/* Upload File Button */}
+      <button
+        type="button"
+        onClick={() => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = (e) => handleImageUpload(account._id, e);
+          input.click();
+        }}
+        disabled={!isSelected}
+        className={`flex items-center justify-center p-1 rounded-md ${account["col9"]?.toUpperCase() === "YES" 
+          ? "bg-red-100 text-red-600" 
+          : "bg-blue-100 text-blue-600"} hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        <Upload className="h-5 w-5 mr-1" />
+        <span className="text-xs">Upload Image</span>
+      </button>
+
+      {/* Camera Modal */}
+      {/* Camera Modal */}
+{/* Camera Modal */}
+{/* Camera Modal */}
+{cameraModalOpen && (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    {/* Backdrop */}
+    <div className="absolute inset-0 bg-black bg-opacity-75" onClick={stopCamera}></div>
+    
+    {/* Modal Content */}
+    <div className="relative z-[10000] bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-2xl">
+      {/* Close Button */}
+      <button 
+        onClick={stopCamera}
+        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      
+      {/* Video Container */}
+      <div className="relative aspect-video bg-black rounded-md overflow-hidden mb-4">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted
+          className="w-full h-full object-cover"
+        />
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
+      
+      {/* Capture Button Container - Fixed positioning */}
+      <div className="w-full flex justify-center">
+        <button
+          onClick={capturePhoto}
+          className="bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 flex items-center shadow-lg transform hover:scale-105 transition-all duration-200 z-[10001] relative"
+          style={{ zIndex: 10001 }}
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6 mr-2" 
+            viewBox="0 0 20 20" 
+            fill="currentColor"
+          >
+            <path 
+              fillRule="evenodd" 
+              d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" 
+              clipRule="evenodd" 
+            />
+          </svg>
+          Capture Photo
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {account["col9"]?.toUpperCase() === "YES" && (
+        <span className="text-xs text-red-500">* Required</span>
+      )}
+    </div>
+  )}
+</td>
                         </tr>
                       )
                     })

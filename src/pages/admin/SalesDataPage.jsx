@@ -1221,16 +1221,23 @@ const capturePhoto = () => {
       {/* Camera Modal */}
       {/* Camera Modal */}
 {/* Camera Modal */}
+{/* Camera Modal */}
 {cameraModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000]">
-    <div className="bg-white rounded-lg p-4 max-w-md w-full relative z-[1001]">
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    {/* Backdrop */}
+    <div className="absolute inset-0 bg-black bg-opacity-75" onClick={stopCamera}></div>
+    
+    {/* Modal Content */}
+    <div className="relative z-[10000] bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-2xl">
+      {/* Close Button */}
       <button 
         onClick={stopCamera}
-        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[1002]"
+        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
       >
         <X className="h-5 w-5" />
       </button>
       
+      {/* Video Container */}
       <div className="relative aspect-video bg-black rounded-md overflow-hidden mb-4">
         <video 
           ref={videoRef} 
@@ -1242,24 +1249,26 @@ const capturePhoto = () => {
         <canvas ref={canvasRef} className="hidden" />
       </div>
       
-      <div className="flex justify-center relative z-[1002]">
+      {/* Capture Button Container - Fixed positioning */}
+      <div className="w-full flex justify-center">
         <button
           onClick={capturePhoto}
-          className="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 flex items-center shadow-lg"
+          className="bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 flex items-center shadow-lg transform hover:scale-105 transition-all duration-200 z-[10001] relative"
+          style={{ zIndex: 10001 }}
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 mr-2" 
+            className="h-6 w-6 mr-2" 
             viewBox="0 0 20 20" 
             fill="currentColor"
           >
             <path 
               fillRule="evenodd" 
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" 
+              d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" 
               clipRule="evenodd" 
             />
           </svg>
-          Capture
+          Capture Photo
         </button>
       </div>
     </div>
