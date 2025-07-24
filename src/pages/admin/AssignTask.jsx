@@ -722,6 +722,7 @@ const formatDateToDDMMYYYY = (date, time = null) => {
 
   // Updated handleSubmit function with proper sheet selection logic
   // Updated handleSubmit function with shop-based sheet selection logic
+// Updated handleSubmit function with proper sheet selection logic
 const handleSubmit = async (e) => {
   e.preventDefault();
   setIsSubmitting(true);
@@ -733,27 +734,27 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    // NEW LOGIC: Use the selected shop name as the sheet name
-    const submitSheetName = formData.department; // This will be the shop name like "Balaji"
+    // UPDATED LOGIC: Use "DELEGATION" sheet for one-time tasks, shop name for recurring tasks
+    const submitSheetName = formData.frequency === "one-time" ? "DELEGATION" : formData.department;
 
-    // Get the last task ID from the shop-specific sheet
+    // Get the last task ID from the appropriate sheet
     const lastTaskId = await getLastTaskId(submitSheetName);
     let nextTaskId = lastTaskId + 1;
 
     // Prepare all tasks data for batch insertion
-// Prepare all tasks data for batch insertion
-const tasksData = generatedTasks.map((task, index) => ({
-  timestamp: formatDateToDDMMYYYY(new Date(), time), // Changed this line
-  taskId: (nextTaskId + index).toString(),
-  firm: task.department,
-  givenBy: task.givenBy,
-  name: task.doer,
-  description: task.description,
-  startDate: task.dueDate, // This already includes time from generateTasks
-  freq: task.frequency,
-  enableReminders: task.enableReminders ? "Yes" : "No",
-  requireAttachment: task.requireAttachment ? "Yes" : "No"
-}));
+    const tasksData = generatedTasks.map((task, index) => ({
+      timestamp: formatDateToDDMMYYYY(new Date(), time),
+      taskId: (nextTaskId + index).toString(),
+      firm: task.department,
+      givenBy: task.givenBy,
+      name: task.doer,
+      description: task.description,
+      startDate: task.dueDate, // This already includes time from generateTasks
+      freq: task.frequency,
+      enableReminders: task.enableReminders ? "Yes" : "No",
+      requireAttachment: task.requireAttachment ? "Yes" : "No"
+    }));
+
     console.log(`Submitting ${tasksData.length} tasks in batch to ${submitSheetName} sheet:`, tasksData);
 
     // Submit all tasks in one batch to Google Sheets
@@ -772,7 +773,7 @@ const tasksData = generatedTasks.map((task, index) => ({
       }
     );
 
-    // Show a success message with the shop sheet name
+    // Show a success message with the correct sheet name
     alert(`Successfully submitted ${generatedTasks.length} tasks to ${submitSheetName} sheet in one batch!`);
 
     // Reset form
