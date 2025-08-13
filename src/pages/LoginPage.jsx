@@ -43,7 +43,7 @@ const LoginPage = () => {
         const SPREADSHEET_ID = "1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs"
 
         // Construct the URL to read the sheet data directly
-        const sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=master`
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Whatsapp`
 
         const response = await fetch(sheetUrl)
         const text = await response.text()
@@ -57,39 +57,46 @@ const LoginPage = () => {
         const userRoles = {}
 
         // Process the data rows (skip header row if it exists)
-        if (data.table && data.table.rows) {
-          console.log("Raw sheet data:", data.table.rows);
+       // Process the data rows (skip header row if it exists)
+if (data.table && data.table.rows) {
+  console.log("Raw sheet data:", data.table.rows);
 
-          // Start from index 1 to skip header row (adjust if needed)
-          for (let i = 1; i < data.table.rows.length; i++) {
-            const row = data.table.rows[i]
+  // Process all rows starting from index 0
+  for (let i = 0; i < data.table.rows.length; i++) {
+    const row = data.table.rows[i]
 
-            // Extract data from columns C, D, E (indices 2, 3, 4)
-            const username = row.c[2] ? String(row.c[2].v || '').trim().toLowerCase() : '';
-            const password = row.c[3] ? String(row.c[3].v || '').trim() : '';
-            const role = row.c[4] ? String(row.c[4].v || '').trim() : 'user';
+    // Skip header row - check if the first cell contains "Doer's Name" (header text)
+    if (i === 0 && row.c[2] && String(row.c[2].v || '').trim() === "Doer's Name") {
+      console.log("Skipping header row");
+      continue;
+    }
 
-            console.log(`Processing row ${i}: username=${username}, password=${password}, role=${role}`);
+    // Extract data from columns C, D, E (indices 2, 3, 4)
+    const username = row.c[2] ? String(row.c[2].v || '').trim().toLowerCase() : '';
+    const password = row.c[3] ? String(row.c[3].v || '').trim() : '';
+    const role = row.c[4] ? String(row.c[4].v || '').trim() : 'user';
 
-            // Only process if we have both username and password
-            if (username && password && password.trim() !== '') {
-              // Check if the role is any kind of inactive status
-              if (isInactiveRole(role)) {
-                console.log(`Skipping inactive user: ${username} with role: ${role}`);
-                continue; // Skip this user
-              }
+    console.log(`Processing row ${i}: username=${username}, password=${password}, role=${role}`);
 
-              // Store normalized role for comparison
-              const normalizedRole = role.toLowerCase();
+    // Only process if we have both username and password
+    if (username && password && password.trim() !== '') {
+      // Check if the role is any kind of inactive status
+      if (isInactiveRole(role)) {
+        console.log(`Skipping inactive user: ${username} with role: ${role}`);
+        continue; // Skip this user
+      }
 
-              // Store in our maps
-              userCredentials[username] = password;
-              userRoles[username] = normalizedRole;
+      // Store normalized role for comparison
+      const normalizedRole = role.toLowerCase();
 
-              console.log(`Added credential for: ${username}, Role: ${normalizedRole}`);
-            }
-          }
-        }
+      // Store in our maps
+      userCredentials[username] = password;
+      userRoles[username] = normalizedRole;
+
+      console.log(`Added credential for: ${username}, Role: ${normalizedRole}`);
+    }
+  }
+}
 
         setMasterData({ userCredentials, userRoles })
         console.log("Loaded credentials from master sheet:", Object.keys(userCredentials).length)
