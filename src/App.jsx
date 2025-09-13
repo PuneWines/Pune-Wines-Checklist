@@ -1,35 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
-import LoginPage from "./pages/LoginPage"
-import AdminDashboard from "./pages/admin/Dashboard"
-import AdminAssignTask from "./pages/admin/AssignTask"
+import { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminAssignTask from "./pages/admin/AssignTask";
 // import AllTasks from "./pages/admin/AllTasks"
-import DataPage from "./pages/admin/DataPage"
-import AdminDataPage from "./pages/admin/admin-data-page"
-import AccountDataPage from "./pages/delegation"
-import License from "./pages/License"
-import TrainingVideo from "./pages/TrainingVideo"
-import "./index.css"
+import DataPage from "./pages/admin/DataPage";
+import AdminDataPage from "./pages/admin/admin-data-page";
+import AccountDataPage from "./pages/delegation";
+import License from "./pages/License";
+import TrainingVideo from "./pages/TrainingVideo";
+import "./index.css";
 
 // Auth wrapper component to protect routes
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const username = sessionStorage.getItem("username")
-  const userRole = sessionStorage.getItem("role")
+  const username = sessionStorage.getItem("username");
+  const userRole = sessionStorage.getItem("role");
 
   // If no user is logged in, redirect to login
   if (!username) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace />;
   }
 
   // If this is an admin-only route and user is not admin, redirect to tasks
   if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/dashboard/admin" replace />
+    return <Navigate to="/dashboard/admin" replace />;
   }
 
-  return children
-}
+  return children;
+};
 
 function App() {
   // const [darkMode, setDarkMode] = useState(false)
@@ -69,7 +74,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Dashboard redirect */}
-        <Route path="/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
+        <Route
+          path="/dashboard"
+          element={<Navigate to="/dashboard/admin" replace />}
+        />
 
         {/* Admin & User Dashboard route */}
         <Route
@@ -128,7 +136,6 @@ function App() {
           }
         />
 
-
         {/* Specific route for Admin Data Page */}
         <Route
           path="/dashboard/data/admin"
@@ -140,16 +147,37 @@ function App() {
         />
 
         {/* Backward compatibility redirects */}
-        <Route path="/admin/*" element={<Navigate to="/dashboard/admin" replace />} />
-        <Route path="/admin/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
-        <Route path="/admin/assign-task" element={<Navigate to="/dashboard/assign-task" replace />} />
-        <Route path="/admin/data/:category" element={<Navigate to="/dashboard/data/:category" replace />} />
-         <Route path="/admin/license" element={<Navigate to="/dashboard/license" replace />} />
-        <Route path="/admin/traning-video" element={<Navigate to="/dashboard/traning-video" replace />} />
-        <Route path="/user/*" element={<Navigate to="/dashboard/admin" replace />} />
+        <Route
+          path="/admin/*"
+          element={<Navigate to="/dashboard/admin" replace />}
+        />
+        <Route
+          path="/admin/dashboard"
+          element={<Navigate to="/dashboard/admin" replace />}
+        />
+        <Route
+          path="/admin/assign-task"
+          element={<Navigate to="/dashboard/assign-task" replace />}
+        />
+        <Route
+          path="/admin/data/:category"
+          element={<Navigate to="/dashboard/data/:category" replace />}
+        />
+        <Route
+          path="/admin/license"
+          element={<Navigate to="/dashboard/license" replace />}
+        />
+        <Route
+          path="/admin/traning-video"
+          element={<Navigate to="/dashboard/traning-video" replace />}
+        />
+        <Route
+          path="/user/*"
+          element={<Navigate to="/dashboard/admin" replace />}
+        />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

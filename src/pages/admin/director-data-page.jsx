@@ -1364,6 +1364,7 @@ function AccountDataPage() {
   // NEW: History-specific state
   const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set())
   const [isSubmittingHistory, setIsSubmittingHistory] = useState(false)
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false)
 
   // Add this state at the top of your component
   const [cameraStream, setCameraStream] = useState(null);
@@ -1909,6 +1910,89 @@ function AccountDataPage() {
     setRemarksData({})
   }
 
+  // Clear only Column K (Actual) for selected history items
+  const handleHistoryDelete = async () => {
+    const selectedHistoryItemsArray = Array.from(selectedHistoryItems)
+
+    if (selectedHistoryItemsArray.length === 0) {
+      alert("Please select at least one item to clear Actual date (Column K)")
+      return
+    }
+
+    const confirmClear = window.confirm(
+      `This will clear the Actual date (Column K) for ${selectedHistoryItemsArray.length} selected record(s). Data will NOT be deleted. Continue?`
+    )
+    if (!confirmClear) return
+
+    setIsDeletingHistory(true)
+    try {
+      const rowDataClear = selectedHistoryItemsArray
+        .map((id) => {
+          const item = historyData.find((history) => history._id === id)
+          if (!item) return null
+          return {
+            taskId: item["col1"],
+            rowIndex: item._rowIndex,
+            clearActual: true,
+            actualDate: "",
+          }
+        })
+        .filter(Boolean)
+
+      if (rowDataClear.length === 0) {
+        setIsDeletingHistory(false)
+        return
+      }
+
+      const formData = new FormData()
+      formData.append("sheetName", CONFIG.SHEET_NAME)
+      formData.append("action", "updateTaskData")
+      formData.append("rowData", JSON.stringify(rowDataClear))
+
+      const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        body: formData,
+        mode: "cors",
+        headers: { Accept: "application/json" },
+      })
+
+      if (response.ok) {
+        const responseText = await response.text()
+        let result
+        try {
+          result = JSON.parse(responseText)
+        } catch (parseError) {
+          if (responseText.toLowerCase().includes("success")) {
+            result = { success: true, message: responseText }
+          } else {
+            throw new Error(`Invalid response: ${responseText}`)
+          }
+        }
+
+        if (result.success) {
+          // Allow Apps Script to apply changes before refetching
+          await new Promise((r) => setTimeout(r, 1500))
+          await fetchSheetData()
+
+          setSelectedHistoryItems(new Set())
+          setSuccessMessage(
+            `Successfully cleared Actual date (Column K) for ${selectedHistoryItemsArray.length} item(s). Items moved back to pending tasks.`
+          )
+          setTimeout(() => setSuccessMessage(""), 5000)
+        } else {
+          throw new Error(result.error || "Failed to clear Actual date")
+        }
+      } else {
+        throw new Error("Failed to clear Actual date")
+      }
+    } catch (error) {
+      console.error("History deletion error:", error)
+      alert("Error clearing Actual date: " + error.message)
+    } finally {
+      setIsDeletingHistory(false)
+    }
+  }
+
   // NEW: History submit function
   const handleHistorySubmit = async () => {
     const selectedHistoryItemsArray = Array.from(selectedHistoryItems)
@@ -2187,6 +2271,20 @@ const handleSubmit = async () => {
                 </div>
               )}
             </button>
+
+            {/* Clear Actual Button - Only show in history view */}
+            {showHistory && (
+              <button
+                onClick={handleHistoryDelete}
+                disabled={selectedHistoryItemsCount === 0 || isDeletingHistory}
+                className="rounded-md bg-red-600 py-2 px-4 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center">
+                  <X className="h-4 w-4 mr-1" />
+                  <span>{isDeletingHistory ? "Clearing..." : `Clear Actual (${selectedHistoryItemsCount})`}</span>
+                </div>
+              </button>
+            )}
 
             {!showHistory && (
               <button

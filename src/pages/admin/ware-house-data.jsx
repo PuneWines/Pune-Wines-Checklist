@@ -687,45 +687,46 @@
 //   return (
 //     <AdminLayout>
 //       <div className="space-y-6">
-//         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+//         <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
 //           <h1 className="text-2xl font-bold tracking-tight text-purple-700">
 //             {showHistory ? CONFIG.PAGE_CONFIG.historyTitle : CONFIG.PAGE_CONFIG.title}
 //           </h1>
 
 //           <div className="flex space-x-4">
 //             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+//               <Search className="absolute left-3 top-1/2 text-gray-400 transform -translate-y-1/2" size={18} />
 //               <input
 //                 type="text"
 //                 placeholder={showHistory ? "Search history..." : "Search tasks..."}
 //                 value={searchTerm}
 //                 onChange={(e) => setSearchTerm(e.target.value)}
-//                 className="pl-10 pr-4 py-2 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+//                 className="py-2 pr-4 pl-10 rounded-md border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
 //               />
 //             </div>
 
 //             <button
 //               onClick={toggleHistory}
-//               className="rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 py-2 px-4 text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+//               className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 //             >
 //               {showHistory ? (
 //                 <div className="flex items-center">
-//                   <ArrowLeft className="h-4 w-4 mr-1" />
+//                   <ArrowLeft className="mr-1 w-4 h-4" />
 //                   <span>Back to Tasks</span>
 //                 </div>
 //               ) : (
 //                 <div className="flex items-center">
-//                   <History className="h-4 w-4 mr-1" />
+//                   <History className="mr-1 w-4 h-4" />
 //                   <span>View History</span>
 //                 </div>
 //               )}
 //             </button>
 
+//          ?
 //             {!showHistory && (
 //               <button
 //                 onClick={handleSubmit}
 //                 disabled={selectedItemsCount === 0 || isSubmitting}
-//                 className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 py-2 px-4 text-white hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+//                 className="px-4 py-2 text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-md hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
 //               >
 //                 {isSubmitting ? "Processing..." : `Submit Selected (${selectedItemsCount})`}
 //               </button>
@@ -734,23 +735,23 @@
 //         </div>
 
 //         {successMessage && (
-//           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center justify-between">
+//           <div className="flex justify-between items-center px-4 py-3 text-green-700 bg-green-50 rounded-md border border-green-200">
 //             <div className="flex items-center">
-//               <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />
+//               <CheckCircle2 className="mr-2 w-5 h-5 text-green-500" />
 //               {successMessage}
 //             </div>
 //             <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
-//               <X className="h-5 w-5" />
+//               <X className="w-5 h-5" />
 //             </button>
 //           </div>
 //         )}
 
-//         <div className="rounded-lg border border-purple-200 shadow-md bg-white overflow-hidden">
-//           <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 p-4">
-//             <h2 className="text-purple-700 font-medium">
+//         <div className="overflow-hidden bg-white rounded-lg border border-purple-200 shadow-md">
+//           <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+//             <h2 className="font-medium text-purple-700">
 //               {showHistory ? `Completed ${CONFIG.SHEET_NAME} Tasks` : `Pending ${CONFIG.SHEET_NAME} Tasks`}
 //             </h2>
-//             <p className="text-purple-600 text-sm">
+//             <p className="text-sm text-purple-600">
 //               {showHistory
 //                 ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"} tasks`
 //                 : CONFIG.PAGE_CONFIG.description}
@@ -758,34 +759,34 @@
 //           </div>
 
 //           {loading ? (
-//             <div className="text-center py-10">
-//               <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+//             <div className="py-10 text-center">
+//               <div className="inline-block mb-4 w-8 h-8 rounded-full border-t-2 border-b-2 border-purple-500 animate-spin"></div>
 //               <p className="text-purple-600">Loading task data...</p>
 //             </div>
 //           ) : error ? (
-//             <div className="bg-red-50 p-4 rounded-md text-red-800 text-center">
+//             <div className="p-4 text-center text-red-800 bg-red-50 rounded-md">
 //               {error}{" "}
-//               <button className="underline ml-2" onClick={() => window.location.reload()}>
+//               <button className="ml-2 underline" onClick={() => window.location.reload()}>
 //                 Try again
 //               </button>
 //             </div>
 //           ) : showHistory ? (
 //             <>
 //               {/* History Filters */}
-//               <div className="p-4 border-b border-purple-100 bg-gray-50">
-//                 <div className="flex flex-wrap items-center justify-between gap-4">
+//               <div className="p-4 bg-gray-50 border-b border-purple-100">
+//                 <div className="flex flex-wrap gap-4 justify-between items-center">
 //                   {getFilteredMembersList().length > 0 && (
 //                     <div className="flex flex-col">
-//                       <div className="mb-2 flex items-center">
+//                       <div className="flex items-center mb-2">
 //                         <span className="text-sm font-medium text-purple-700">Filter by Member:</span>
 //                       </div>
-//                       <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+//                       <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
 //                         {getFilteredMembersList().map((member, idx) => (
 //                           <div key={idx} className="flex items-center">
 //                             <input
 //                               id={`member-${idx}`}
 //                               type="checkbox"
-//                               className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+//                               className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
 //                               checked={selectedMembers.includes(member)}
 //                               onChange={() => handleMemberSelection(member)}
 //                             />
@@ -799,12 +800,12 @@
 //                   )}
 
 //                   <div className="flex flex-col">
-//                     <div className="mb-2 flex items-center">
+//                     <div className="flex items-center mb-2">
 //                       <span className="text-sm font-medium text-purple-700">Filter by Date Range:</span>
 //                     </div>
-//                     <div className="flex items-center gap-2">
+//                     <div className="flex gap-2 items-center">
 //                       <div className="flex items-center">
-//                         <label htmlFor="start-date" className="text-sm text-gray-700 mr-1">
+//                         <label htmlFor="start-date" className="mr-1 text-sm text-gray-700">
 //                           From
 //                         </label>
 //                         <input
@@ -812,11 +813,11 @@
 //                           type="date"
 //                           value={startDate}
 //                           onChange={(e) => setStartDate(e.target.value)}
-//                           className="text-sm border border-gray-200 rounded-md p-1"
+//                           className="p-1 text-sm rounded-md border border-gray-200"
 //                         />
 //                       </div>
 //                       <div className="flex items-center">
-//                         <label htmlFor="end-date" className="text-sm text-gray-700 mr-1">
+//                         <label htmlFor="end-date" className="mr-1 text-sm text-gray-700">
 //                           To
 //                         </label>
 //                         <input
@@ -824,7 +825,7 @@
 //                           type="date"
 //                           value={endDate}
 //                           onChange={(e) => setEndDate(e.target.value)}
-//                           className="text-sm border border-gray-200 rounded-md p-1"
+//                           className="p-1 text-sm rounded-md border border-gray-200"
 //                         />
 //                       </div>
 //                     </div>
@@ -833,7 +834,7 @@
 //                   {(selectedMembers.length > 0 || startDate || endDate || searchTerm) && (
 //                     <button
 //                       onClick={resetFilters}
-//                       className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+//                       className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
 //                     >
 //                       Clear All Filters
 //                     </button>
@@ -842,9 +843,9 @@
 //               </div>
 
 //               {/* Task Statistics */}
-//               <div className="p-4 border-b border-purple-100 bg-blue-50">
+//               <div className="p-4 bg-blue-50 border-b border-purple-100">
 //                 <div className="flex flex-col">
-//                   <h3 className="text-sm font-medium text-blue-700 mb-2">Task Completion Statistics:</h3>
+//                   <h3 className="mb-2 text-sm font-medium text-blue-700">Task Completion Statistics:</h3>
 //                   <div className="flex flex-wrap gap-4">
 //                     <div className="px-3 py-2 bg-white rounded-md shadow-sm">
 //                       <span className="text-xs text-gray-500">Total Completed</span>
@@ -873,45 +874,45 @@
 //               {/* History Table - Single scroll container */}
 //               <div className="h-[calc(100vh-300px)] overflow-auto">
 //                 <table className="min-w-full divide-y divide-gray-200">
-//                   <thead className="bg-gray-50 sticky top-0 z-10">
+//                   <thead className="sticky top-0 z-10 bg-gray-50">
 //                     <tr>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Task ID
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Shop Name
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Given By
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Name
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Task Description
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
 //                         Task Start Date
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Freq
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Enable Reminders
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Require Attachment
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-green-50">
 //                         Actual Date
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-blue-50">
 //                         Status
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-50">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-purple-50">
 //                         Remarks
 //                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Attachment
 //                       </th>
 //                     </tr>
@@ -933,7 +934,7 @@
 //                             <div className="text-sm text-gray-900">{history["col4"] || "—"}</div>
 //                           </td>
 //                           <td className="px-6 py-4">
-//                             <div className="text-sm text-gray-900 max-w-xs" title={history["col5"]}>
+//                             <div className="max-w-xs text-sm text-gray-900" title={history["col5"]}>
 //                               {history["col5"] || "—"}
 //                             </div>
 //                           </td>
@@ -965,7 +966,7 @@
 //                             </span>
 //                           </td>
 //                           <td className="px-6 py-4 bg-purple-50">
-//                             <div className="text-sm text-gray-900 max-w-xs" title={history["col13"]}>
+//                             <div className="max-w-xs text-sm text-gray-900" title={history["col13"]}>
 //                               {history["col13"] || "—"}
 //                             </div>
 //                           </td>
@@ -975,12 +976,12 @@
 //                                 href={history["col14"]}
 //                                 target="_blank"
 //                                 rel="noopener noreferrer"
-//                                 className="text-blue-600 hover:text-blue-800 underline flex items-center"
+//                                 className="flex items-center text-blue-600 underline hover:text-blue-800"
 //                               >
 //                                 <img
 //                                   src={history["col14"] || "/placeholder.svg?height=32&width=32"}
 //                                   alt="Attachment"
-//                                   className="h-8 w-8 object-cover rounded-md mr-2"
+//                                   className="object-cover mr-2 w-8 h-8 rounded-md"
 //                                 />
 //                                 View
 //                               </a>
@@ -1007,50 +1008,50 @@
 //             /* Regular Tasks Table - Single scroll container */
 //             <div className="h-[calc(100vh-250px)] overflow-auto">
 //               <table className="min-w-full divide-y divide-gray-200">
-//                 <thead className="bg-gray-50 sticky top-0 z-10">
+//                 <thead className="sticky top-0 z-10 bg-gray-50">
 //                   <tr>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       <input
 //                         type="checkbox"
-//                         className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+//                         className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
 //                         checked={filteredAccountData.length > 0 && selectedItems.size === filteredAccountData.length}
 //                         onChange={handleSelectAllItems}
 //                       />
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Task ID
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Shop Name
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Given By
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Name
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Task Description
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
 //                       Task Start Date
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Freq
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Enable Reminders
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Require Attachment
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Status
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Remarks
 //                     </th>
-//                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Upload Image
 //                     </th>
 //                   </tr>
@@ -1064,7 +1065,7 @@
 //                           <td className="px-6 py-4 whitespace-nowrap">
 //                             <input
 //                               type="checkbox"
-//                               className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+//                               className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
 //                               checked={isSelected}
 //                               onChange={(e) => handleCheckboxClick(e, account._id)}
 //                             />
@@ -1082,7 +1083,7 @@
 //                             <div className="text-sm text-gray-900">{account["col4"] || "—"}</div>
 //                           </td>
 //                           <td className="px-6 py-4">
-//   <div className="text-sm text-gray-900 max-w-xs break-words whitespace-normal">
+//   <div className="max-w-xs text-sm text-gray-900 whitespace-normal break-words">
 //     {account["col5"] || "—"}
 //   </div>
 // </td>
@@ -1112,7 +1113,7 @@
 //                                   })
 //                                 }
 //                               }}
-//                               className="border border-gray-300 rounded-md px-2 py-1 w-full disabled:bg-gray-100 disabled:cursor-not-allowed"
+//                               className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
 //                             >
 //                               <option value="">Select...</option>
 //                               <option value="Yes">Yes</option>
@@ -1126,7 +1127,7 @@
 //                               disabled={!isSelected || !additionalData[account._id]}
 //                               value={remarksData[account._id] || ""}
 //                               onChange={(e) => setRemarksData((prev) => ({ ...prev, [account._id]: e.target.value }))}
-//                               className="border rounded-md px-2 py-1 w-full border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+//                               className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
 //                             />
 //                           </td>
 //                           <td className="px-6 py-4 whitespace-nowrap bg-green-50">
@@ -1139,7 +1140,7 @@
 //             : URL.createObjectURL(account.image)
 //         }
 //         alt="Receipt"
-//         className="h-10 w-10 object-cover rounded-md mr-2"
+//         className="object-cover mr-2 w-10 h-10 rounded-md"
 //       />
 //       <div className="flex flex-col">
 //         <span className="text-xs text-gray-500">
@@ -1170,7 +1171,7 @@
 //       >
 //         <svg
 //           xmlns="http://www.w3.org/2000/svg"
-//           className="h-5 w-5 mr-1"
+//           className="mr-1 w-5 h-5"
 //           fill="none"
 //           viewBox="0 0 24 24"
 //           stroke="currentColor"
@@ -1206,7 +1207,7 @@
 //           ? "bg-red-100 text-red-600" 
 //           : "bg-blue-100 text-blue-600"} hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
 //       >
-//         <Upload className="h-5 w-5 mr-1" />
+//         <Upload className="mr-1 w-5 h-5" />
 //         <span className="text-xs">Upload Image</span>
 //       </button>
 
@@ -1226,23 +1227,23 @@
 //         onClick={stopCamera}
 //         className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
 //       >
-//         <X className="h-5 w-5" />
+//         <X className="w-5 h-5" />
 //       </button>
       
 //       {/* Video Container */}
-//       <div className="relative aspect-video bg-black rounded-md overflow-hidden mb-4">
+//       <div className="overflow-hidden relative mb-4 bg-black rounded-md aspect-video">
 //         <video 
 //           ref={videoRef} 
 //           autoPlay 
 //           playsInline 
 //           muted
-//           className="w-full h-full object-cover"
+//           className="object-cover w-full h-full"
 //         />
 //         <canvas ref={canvasRef} className="hidden" />
 //       </div>
       
 //       {/* Capture Button Container - Fixed positioning */}
-//       <div className="w-full flex justify-center">
+//       <div className="flex justify-center w-full">
 //         <button
 //           onClick={capturePhoto}
 //           className="bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 flex items-center shadow-lg transform hover:scale-105 transition-all duration-200 z-[10001] relative"
@@ -1250,7 +1251,7 @@
 //         >
 //           <svg 
 //             xmlns="http://www.w3.org/2000/svg" 
-//             className="h-6 w-6 mr-2" 
+//             className="mr-2 w-6 h-6" 
 //             viewBox="0 0 20 20" 
 //             fill="currentColor"
 //           >
@@ -1362,6 +1363,7 @@ function AccountDataPage() {
   // NEW: History-specific state
   const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set())
   const [isSubmittingHistory, setIsSubmittingHistory] = useState(false)
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false)
 
   // Add this state at the top of your component
   const [cameraStream, setCameraStream] = useState(null);
@@ -1907,6 +1909,88 @@ function AccountDataPage() {
     setRemarksData({})
   }
 
+  // Clear only Column K (Actual) for selected history items
+  const handleHistoryDelete = async () => {
+    const selectedHistoryItemsArray = Array.from(selectedHistoryItems)
+
+    if (selectedHistoryItemsArray.length === 0) {
+      alert("Please select at least one item to clear Actual date (Column K)")
+      return
+    }
+
+    const confirmClear = window.confirm(
+      `This will clear the Actual date (Column K) for ${selectedHistoryItemsArray.length} selected record(s). Data will NOT be deleted. Continue?`
+    )
+    if (!confirmClear) return
+
+    setIsDeletingHistory(true)
+    try {
+      const rowDataClear = selectedHistoryItemsArray
+        .map((id) => {
+          const item = historyData.find((history) => history._id === id)
+          if (!item) return null
+          return {
+            taskId: item["col1"],
+            rowIndex: item._rowIndex,
+            clearActual: true,
+            actualDate: "",
+          }
+        })
+        .filter(Boolean)
+
+      if (rowDataClear.length === 0) {
+        setIsDeletingHistory(false)
+        return
+      }
+
+      const formData = new FormData()
+      formData.append("sheetName", CONFIG.SHEET_NAME)
+      formData.append("action", "updateTaskData")
+      formData.append("rowData", JSON.stringify(rowDataClear))
+
+      const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        body: formData,
+        mode: "cors",
+        headers: { Accept: "application/json" },
+      })
+
+      if (response.ok) {
+        const responseText = await response.text()
+        let result
+        try {
+          result = JSON.parse(responseText)
+        } catch (parseError) {
+          if (responseText.toLowerCase().includes("success")) {
+            result = { success: true, message: responseText }
+          } else {
+            throw new Error(`Invalid response: ${responseText}`)
+          }
+        }
+
+        if (result.success) {
+          await new Promise((r) => setTimeout(r, 1500))
+          await fetchSheetData()
+
+          setSelectedHistoryItems(new Set())
+          setSuccessMessage(
+            `Successfully cleared Actual date (Column K) for ${selectedHistoryItemsArray.length} item(s). Items moved back to pending tasks.`
+          )
+          setTimeout(() => setSuccessMessage(""), 5000)
+        } else {
+          throw new Error(result.error || "Failed to clear Actual date")
+        }
+      } else {
+        throw new Error("Failed to clear Actual date")
+      }
+    } catch (error) {
+      console.error("History deletion error:", error)
+      alert("Error clearing Actual date: " + error.message)
+    } finally {
+      setIsDeletingHistory(false)
+    }
+  }
+
   // NEW: History submit function
   const handleHistorySubmit = async () => {
     const selectedHistoryItemsArray = Array.from(selectedHistoryItems)
@@ -2152,45 +2236,59 @@ function AccountDataPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight text-purple-700">
             {showHistory ? CONFIG.PAGE_CONFIG.historyTitle : CONFIG.PAGE_CONFIG.title}
           </h1>
 
           <div className="flex space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 text-gray-400 transform -translate-y-1/2" size={18} />
               <input
                 type="text"
                 placeholder={showHistory ? "Search history..." : "Search tasks..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="py-2 pr-4 pl-10 rounded-md border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
             <button
               onClick={toggleHistory}
-              className="rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 py-2 px-4 text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {showHistory ? (
                 <div className="flex items-center">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <ArrowLeft className="mr-1 w-4 h-4" />
                   <span>Back to Tasks</span>
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <History className="h-4 w-4 mr-1" />
+                  <History className="mr-1 w-4 h-4" />
                   <span>View History</span>
                 </div>
               )}
             </button>
 
+            {/* Clear Actual Button - Only show in history view */}
+            {showHistory && (
+              <button
+                onClick={handleHistoryDelete}
+                disabled={selectedHistoryItemsCount === 0 || isDeletingHistory}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center">
+                  <X className="mr-1 w-4 h-4" />
+                  <span>{isDeletingHistory ? "Clearing..." : `Clear Actual (${selectedHistoryItemsCount})`}</span>
+                </div>
+              </button>
+            )}
+
             {!showHistory && (
               <button
                 onClick={handleSubmit}
                 disabled={selectedItemsCount === 0 || isSubmitting}
-                className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 py-2 px-4 text-white hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-md hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Processing..." : `Submit Selected (${selectedItemsCount})`}
               </button>
@@ -2201,7 +2299,7 @@ function AccountDataPage() {
               <button
                 onClick={handleHistorySubmit}
                 disabled={selectedHistoryItemsCount === 0 || isSubmittingHistory}
-                className="rounded-md bg-gradient-to-r from-green-600 to-emerald-600 py-2 px-4 text-white hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-md hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingHistory ? "Processing..." : `Submit Selected (${selectedHistoryItemsCount})`}
               </button>
@@ -2210,23 +2308,23 @@ function AccountDataPage() {
         </div>
 
         {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center justify-between">
+          <div className="flex justify-between items-center px-4 py-3 text-green-700 bg-green-50 rounded-md border border-green-200">
             <div className="flex items-center">
-              <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />
+              <CheckCircle2 className="mr-2 w-5 h-5 text-green-500" />
               {successMessage}
             </div>
             <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
-              <X className="h-5 w-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         )}
 
-        <div className="rounded-lg border border-purple-200 shadow-md bg-white overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 p-4">
-            <h2 className="text-purple-700 font-medium">
+        <div className="overflow-hidden bg-white rounded-lg border border-purple-200 shadow-md">
+          <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+            <h2 className="font-medium text-purple-700">
               {showHistory ? `Completed ${CONFIG.SHEET_NAME} Tasks` : `Pending ${CONFIG.SHEET_NAME} Tasks`}
             </h2>
-            <p className="text-purple-600 text-sm">
+            <p className="text-sm text-purple-600">
               {showHistory
                 ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"} tasks`
                 : CONFIG.PAGE_CONFIG.description}
@@ -2234,34 +2332,34 @@ function AccountDataPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-10">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+            <div className="py-10 text-center">
+              <div className="inline-block mb-4 w-8 h-8 rounded-full border-t-2 border-b-2 border-purple-500 animate-spin"></div>
               <p className="text-purple-600">Loading task data...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 p-4 rounded-md text-red-800 text-center">
+            <div className="p-4 text-center text-red-800 bg-red-50 rounded-md">
               {error}{" "}
-              <button className="underline ml-2" onClick={() => window.location.reload()}>
+              <button className="ml-2 underline" onClick={() => window.location.reload()}>
                 Try again
               </button>
             </div>
           ) : showHistory ? (
             <>
               {/* History Filters */}
-              <div className="p-4 border-b border-purple-100 bg-gray-50">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="p-4 bg-gray-50 border-b border-purple-100">
+                <div className="flex flex-wrap gap-4 justify-between items-center">
                   {getFilteredMembersList().length > 0 && (
                     <div className="flex flex-col">
-                      <div className="mb-2 flex items-center">
+                      <div className="flex items-center mb-2">
                         <span className="text-sm font-medium text-purple-700">Filter by Member:</span>
                       </div>
-                      <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+                      <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
                         {getFilteredMembersList().map((member, idx) => (
                           <div key={idx} className="flex items-center">
                             <input
                               id={`member-${idx}`}
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                              className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                               checked={selectedMembers.includes(member)}
                               onChange={() => handleMemberSelection(member)}
                             />
@@ -2275,12 +2373,12 @@ function AccountDataPage() {
                   )}
 
                   <div className="flex flex-col">
-                    <div className="mb-2 flex items-center">
+                    <div className="flex items-center mb-2">
                       <span className="text-sm font-medium text-purple-700">Filter by Date Range:</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2 items-center">
                       <div className="flex items-center">
-                        <label htmlFor="start-date" className="text-sm text-gray-700 mr-1">
+                        <label htmlFor="start-date" className="mr-1 text-sm text-gray-700">
                           From
                         </label>
                         <input
@@ -2288,11 +2386,11 @@ function AccountDataPage() {
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="text-sm border border-gray-200 rounded-md p-1"
+                          className="p-1 text-sm rounded-md border border-gray-200"
                         />
                       </div>
                       <div className="flex items-center">
-                        <label htmlFor="end-date" className="text-sm text-gray-700 mr-1">
+                        <label htmlFor="end-date" className="mr-1 text-sm text-gray-700">
                           To
                         </label>
                         <input
@@ -2300,7 +2398,7 @@ function AccountDataPage() {
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="text-sm border border-gray-200 rounded-md p-1"
+                          className="p-1 text-sm rounded-md border border-gray-200"
                         />
                       </div>
                     </div>
@@ -2309,7 +2407,7 @@ function AccountDataPage() {
                   {(selectedMembers.length > 0 || startDate || endDate || searchTerm) && (
                     <button
                       onClick={resetFilters}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+                      className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
                     >
                       Clear All Filters
                     </button>
@@ -2318,9 +2416,9 @@ function AccountDataPage() {
               </div>
 
               {/* Task Statistics */}
-              <div className="p-4 border-b border-purple-100 bg-blue-50">
+              <div className="p-4 bg-blue-50 border-b border-purple-100">
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-medium text-blue-700 mb-2">Task Completion Statistics:</h3>
+                  <h3 className="mb-2 text-sm font-medium text-blue-700">Task Completion Statistics:</h3>
                   <div className="flex flex-wrap gap-4">
                     <div className="px-3 py-2 bg-white rounded-md shadow-sm">
                       <span className="text-xs text-gray-500">Total Completed</span>
@@ -2349,53 +2447,53 @@ function AccountDataPage() {
               {/* History Table - Single scroll container */}
               <div className="h-[calc(100vh-300px)] overflow-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
+                  <thead className="sticky top-0 z-10 bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                          className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                           checked={filteredHistoryData.length > 0 && selectedHistoryItems.size === filteredHistoryData.length}
                           onChange={handleSelectAllHistoryItems}
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Task ID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Shop Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Given By
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Task Description
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
                         Task Start Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Freq
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Enable Reminders
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Require Attachment
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-green-50">
                         Actual Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-blue-50">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-50">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-purple-50">
                         Remarks
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Attachment
                       </th>
                     </tr>
@@ -2409,7 +2507,7 @@ function AccountDataPage() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
                                 type="checkbox"
-                                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                                 checked={isHistorySelected}
                                 onChange={(e) => handleHistoryCheckboxClick(e, history._id)}
                               />
@@ -2427,7 +2525,7 @@ function AccountDataPage() {
                               <div className="text-sm text-gray-900">{history["col4"] || "—"}</div>
                             </td>
                             <td className="px-6 py-4">
-                              <div className="text-sm text-gray-900 max-w-xs" title={history["col5"]}>
+                              <div className="max-w-xs text-sm text-gray-900" title={history["col5"]}>
                                 {history["col5"] || "—"}
                               </div>
                             </td>
@@ -2459,7 +2557,7 @@ function AccountDataPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4 bg-purple-50">
-                              <div className="text-sm text-gray-900 max-w-xs" title={history["col13"]}>
+                              <div className="max-w-xs text-sm text-gray-900" title={history["col13"]}>
                                 {history["col13"] || "—"}
                               </div>
                             </td>
@@ -2469,12 +2567,12 @@ function AccountDataPage() {
                                   href={history["col14"]}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline flex items-center"
+                                  className="flex items-center text-blue-600 underline hover:text-blue-800"
                                 >
                                   <img
                                     src={history["col14"] || "/placeholder.svg?height=32&width=32"}
                                     alt="Attachment"
-                                    className="h-8 w-8 object-cover rounded-md mr-2"
+                                    className="object-cover mr-2 w-8 h-8 rounded-md"
                                   />
                                   View
                                 </a>
@@ -2502,50 +2600,50 @@ function AccountDataPage() {
             /* Regular Tasks Table - Single scroll container */
             <div className="h-[calc(100vh-250px)] overflow-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+                <thead className="sticky top-0 z-10 bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                         checked={filteredAccountData.length > 0 && selectedItems.size === filteredAccountData.length}
                         onChange={handleSelectAllItems}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Task ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Shop Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Given By
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Task Description
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
                       Task Start Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Freq
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Enable Reminders
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Require Attachment
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Remarks
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Upload Image
                     </th>
                   </tr>
@@ -2559,7 +2657,7 @@ function AccountDataPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                              className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                               checked={isSelected}
                               onChange={(e) => handleCheckboxClick(e, account._id)}
                             />
@@ -2577,7 +2675,7 @@ function AccountDataPage() {
                             <div className="text-sm text-gray-900">{account["col4"] || "—"}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-xs break-words whitespace-normal">
+                            <div className="max-w-xs text-sm text-gray-900 whitespace-normal break-words">
                               {account["col5"] || "—"}
                             </div>
                           </td>
@@ -2607,7 +2705,7 @@ function AccountDataPage() {
                                   })
                                 }
                               }}
-                              className="border border-gray-300 rounded-md px-2 py-1 w-full disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             >
                               <option value="">Select...</option>
                               <option value="Yes">Yes</option>
@@ -2621,7 +2719,7 @@ function AccountDataPage() {
                               disabled={!isSelected || !additionalData[account._id]}
                               value={remarksData[account._id] || ""}
                               onChange={(e) => setRemarksData((prev) => ({ ...prev, [account._id]: e.target.value }))}
-                              className="border rounded-md px-2 py-1 w-full border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap bg-green-50">
@@ -2634,7 +2732,7 @@ function AccountDataPage() {
                                       : URL.createObjectURL(account.image)
                                   }
                                   alt="Receipt"
-                                  className="h-10 w-10 object-cover rounded-md mr-2"
+                                  className="object-cover mr-2 w-10 h-10 rounded-md"
                                 />
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-500">
@@ -2665,7 +2763,7 @@ function AccountDataPage() {
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 mr-1"
+                                    className="mr-1 w-5 h-5"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -2701,7 +2799,7 @@ function AccountDataPage() {
                                     ? "bg-red-100 text-red-600"
                                     : "bg-blue-100 text-blue-600"} hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
-                                  <Upload className="h-5 w-5 mr-1" />
+                                  <Upload className="mr-1 w-5 h-5" />
                                   <span className="text-xs">Upload Image</span>
                                 </button>
 
@@ -2718,23 +2816,23 @@ function AccountDataPage() {
                                         onClick={stopCamera}
                                         className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
                                       >
-                                        <X className="h-5 w-5" />
+                                        <X className="w-5 h-5" />
                                       </button>
 
                                       {/* Video Container */}
-                                      <div className="relative aspect-video bg-black rounded-md overflow-hidden mb-4">
+                                      <div className="overflow-hidden relative mb-4 bg-black rounded-md aspect-video">
                                         <video
                                           ref={videoRef}
                                           autoPlay
                                           playsInline
                                           muted
-                                          className="w-full h-full object-cover"
+                                          className="object-cover w-full h-full"
                                         />
                                         <canvas ref={canvasRef} className="hidden" />
                                       </div>
 
                                       {/* Capture Button Container - Fixed positioning */}
-                                      <div className="w-full flex justify-center">
+                                      <div className="flex justify-center w-full">
                                         <button
                                           onClick={capturePhoto}
                                           className="bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 flex items-center shadow-lg transform hover:scale-105 transition-all duration-200 z-[10001] relative"
@@ -2742,7 +2840,7 @@ function AccountDataPage() {
                                         >
                                           <svg
                                             xmlns="http://www.w3.org/2000/svg"
-                                            className="h-6 w-6 mr-2"
+                                            className="mr-2 w-6 h-6"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                           >

@@ -155,10 +155,10 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   const [givenByOptions, setGivenByOptions] = useState([]);
   const [allDoerOptions, setAllDoerOptions] = useState([]);
   const [filteredDoerOptions, setFilteredDoerOptions] = useState([]);
-  
 
   const frequencies = [
     { value: "one-time", label: "One Time (No Recurrence)" },
+    { value: "hourly", label: "Hourly" },
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
     { value: "fortnightly", label: "Fortnightly" },
@@ -559,8 +559,8 @@ const formatDateToDDMMYYYY = (date, time = null) => {
 
     const tasks = [];
 
-    // For one-time tasks, just use the first available date
-    if (formData.frequency === "one-time") {
+    // For one-time and hourly tasks, just use the first available date
+    if (formData.frequency === "one-time" || formData.frequency === "hourly") {
       const taskDateStr = futureDates[startIndex];
 
       tasks.push({
@@ -599,6 +599,10 @@ const formatDateToDDMMYYYY = (date, time = null) => {
         // Determine the next index based on frequency
         switch (formData.frequency) {
           case "daily": {
+            currentIndex += 1; // Next working day
+            break;
+          }
+          case "hourly": {
             currentIndex += 1; // Next working day
             break;
           }
@@ -734,8 +738,8 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    // UPDATED LOGIC: Use "DELEGATION" sheet for one-time tasks, shop name for recurring tasks
-    const submitSheetName = formData.frequency === "one-time" ? "DELEGATION" : formData.department;
+    // UPDATED LOGIC: Use "DELEGATION" sheet for one-time and hourly tasks, shop name for other recurring tasks
+    const submitSheetName = (formData.frequency === "one-time" || formData.frequency === "hourly") ? "DELEGATION" : formData.department;
 
     // Get the last task ID from the appropriate sheet
     const lastTaskId = await getLastTaskId(submitSheetName);
@@ -1064,7 +1068,7 @@ const handleSubmit = async (e) => {
                       >
                         <span className="font-medium">
                           {generatedTasks.length} Tasks Generated
-                          {formData.frequency === "one-time"
+                          {(formData.frequency === "one-time" || formData.frequency === "hourly")
                             ? " (Will be stored in DELEGATION sheet)"
                             : " (Will be stored in Checklist sheet)"
                           }

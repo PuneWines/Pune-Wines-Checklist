@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { CheckCircle2, Upload, X, Search, History, ArrowLeft, Calendar, Check } from "lucide-react"
 import AdminLayout from "../../components/layout/AdminLayout"
+import DeleteButton from "../../components/admin/DeleteButton";
 import ReactDOM from 'react-dom';
 
 // Google Apps Script URL
@@ -29,6 +30,7 @@ function AccountDataPage() {
   const [endDate, setEndDate] = useState("")
   const [selectedHistoryItems, setSelectedHistoryItems] = useState([])
   const [markingAsDone, setMarkingAsDone] = useState(false)
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false)
   const [userRole, setUserRole] = useState("")
   const [confirmationModal, setConfirmationModal] = useState({
     isOpen: false,
@@ -257,31 +259,31 @@ const ConfirmationModal = ({ isOpen, itemCount, onConfirm, onCancel }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-        <div className="flex items-center justify-center mb-4">
-          <div className="bg-yellow-100 text-yellow-600 rounded-full p-3 mr-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex fixed inset-0 z-50 justify-center items-center bg-black bg-opacity-50">
+      <div className="p-6 mx-4 w-full max-w-md bg-white rounded-lg shadow-xl">
+        <div className="flex justify-center items-center mb-4">
+          <div className="p-3 mr-4 text-yellow-600 bg-yellow-100 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-800">Mark Items as Done</h2>
         </div>
         
-        <p className="text-gray-600 text-center mb-6">
+        <p className="mb-6 text-center text-gray-600">
           Are you sure you want to mark {itemCount} {itemCount === 1 ? 'item' : 'items'} as done?
         </p>
         
         <div className="flex justify-center space-x-4">
           <button 
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md transition-colors hover:bg-gray-300"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="px-4 py-2 text-white bg-green-600 rounded-md transition-colors hover:bg-green-700"
           >
             Confirm
           </button>
@@ -347,6 +349,85 @@ const confirmMarkDone = async () => {
     setMarkingAsDone(false);
   }
 }
+
+  // NEW: Clear Actual (Column K) for selected history items
+  const handleHistoryDelete = async () => {
+    const selectedHistoryItemsArray = Array.from(selectedHistoryItems);
+
+    if (selectedHistoryItemsArray.length === 0) {
+      alert("Please select at least one item to delete Actual date (Column K)");
+      return;
+    }
+
+    const confirmClear = window.confirm(
+      "This will clear the Actual date (Column K) for the selected record(s). Data will NOT be deleted. Continue?"
+    );
+    if (!confirmClear) return;
+
+    setIsDeletingHistory(true);
+    try {
+      // Strategy: Use empty string to clear Column K
+      const rowDataClear = selectedHistoryItemsArray
+        .map((item) => {
+          if (!item) return null;
+          return {
+            taskId: item._id,
+            rowIndex: item._rowIndex,
+            clearActual: true,
+            actualDate: "",
+          };
+        })
+        .filter(Boolean);
+
+      if (rowDataClear.length > 0) {
+        const formData = new FormData();
+        formData.append("sheetName", "COO");
+        formData.append("action", "updateTaskData");
+        formData.append("rowData", JSON.stringify(rowDataClear));
+
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          body: formData,
+          mode: "cors",
+          headers: { Accept: "application/json" },
+        });
+
+        if (response.ok) {
+          const responseText = await response.text();
+          let result;
+          try {
+            result = JSON.parse(responseText);
+          } catch (parseError) {
+            if (responseText.toLowerCase().includes("success")) {
+              result = { success: true, message: responseText };
+            } else {
+              throw new Error(`Invalid response: ${responseText}`);
+            }
+          }
+
+          if (result.success) {
+            // Give Apps Script a moment to update, then refresh
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await fetchSheetData();
+
+            setSelectedHistoryItems([]);
+            setSuccessMessage(
+              `Successfully cleared Actual date (Column K) for ${selectedHistoryItemsArray.length} item(s). Items moved back to pending tasks.`
+            );
+            setTimeout(() => setSuccessMessage(""), 5000);
+          } else {
+            throw new Error(result.error || "Failed to clear Actual date");
+          }
+        } else {
+          throw new Error("Failed to clear Actual date");
+        }
+      }
+    } catch (error) {
+      alert("Error clearing Actual date: " + error.message);
+    } finally {
+      setIsDeletingHistory(false);
+    }
+  };
 
   // Fetch sheet data function
   const fetchSheetData = async () => {
@@ -630,20 +711,20 @@ const confirmMarkDone = async () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight text-purple-700">
             {showHistory ? "Admin Data History" : "Admin Data"}
           </h1>
 
           <div className="flex space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 text-gray-400 transform -translate-y-1/2" size={18} />
               <input
                 type="text"
                 placeholder={showHistory ? "Search history..." : "Search transactions..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="py-2 pr-4 pl-10 rounded-md border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             
@@ -651,20 +732,29 @@ const confirmMarkDone = async () => {
             {userRole === 'admin' && (
               <button
                 onClick={toggleHistory}
-                className="rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 py-2 px-4 text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {showHistory ? (
                   <div className="flex items-center">
-                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    <ArrowLeft className="mr-1 w-4 h-4" />
                     <span>Back to Tasks</span>
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    <History className="h-4 w-4 mr-1" />
+                    <History className="mr-1 w-4 h-4" />
                     <span>View History</span>
                   </div>
                 )}
               </button>
+            )}
+            
+            {/* Delete Button - Only show in history view */}
+            {showHistory && (
+              <DeleteButton
+                onClick={handleHistoryDelete}
+                disabled={selectedHistoryItems.length === 0 || isDeletingHistory}
+                loading={isDeletingHistory}
+              />
             )}
             
             {/* Submit Button - Only show when not in history view */}
@@ -672,7 +762,7 @@ const confirmMarkDone = async () => {
               <button
                 onClick={handleSubmit}
                 disabled={selectedItems.length === 0 || isSubmitting}
-                className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 py-2 px-4 text-white hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-md hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Processing..." : `Submit Selected (${selectedItems.length})`}
               </button>
@@ -680,11 +770,11 @@ const confirmMarkDone = async () => {
             
             {/* Submit Button for History View - Only show when items are selected */}
             {showHistory && selectedHistoryItems.length > 0 && (
-              <div className="fixed top-40 right-10 z-50">
+              <div className="fixed right-10 top-40 z-50">
                 <button
                   onClick={handleMarkMultipleDone}
                   disabled={markingAsDone}
-                  className="rounded-md bg-green-600 text-white px-4 py-2 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {markingAsDone 
                     ? "Processing..." 
@@ -697,25 +787,25 @@ const confirmMarkDone = async () => {
         </div>
         
         {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center justify-between">
+          <div className="flex justify-between items-center px-4 py-3 text-green-700 bg-green-50 rounded-md border border-green-200">
             <div className="flex items-center">
-              <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />  
+              <CheckCircle2 className="mr-2 w-5 h-5 text-green-500" />  
               {successMessage}
             </div>
             <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
-              <X className="h-5 w-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         )}
         
-        <div className="rounded-lg border border-purple-200 shadow-md bg-white overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 p-4">
-            <h2 className="text-purple-700 font-medium">
+        <div className="overflow-hidden bg-white rounded-lg border border-purple-200 shadow-md">
+          <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+            <h2 className="font-medium text-purple-700">
               {showHistory 
                 ? "Completed Admin Records" 
                 : "Admin Records"}
             </h2>
-            <p className="text-purple-600 text-sm">
+            <p className="text-sm text-purple-600">
               {showHistory 
                 ? "Showing all completed records with submission dates"
                 : "Showing today and tomorrow's records with pending submissions"
@@ -724,32 +814,32 @@ const confirmMarkDone = async () => {
           </div>
             
           {loading ? (
-            <div className="text-center py-10">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+            <div className="py-10 text-center">
+              <div className="inline-block mb-4 w-8 h-8 rounded-full border-t-2 border-b-2 border-purple-500 animate-spin"></div>
               <p className="text-purple-600">Loading account data...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 p-4 rounded-md text-red-800 text-center">
-              {error} <button className="underline ml-2" onClick={() => window.location.reload()}>Try again</button>
+            <div className="p-4 text-center text-red-800 bg-red-50 rounded-md">
+              {error} <button className="ml-2 underline" onClick={() => window.location.reload()}>Try again</button>
             </div>  
           ) : showHistory ? (
             // History Table
             <>
               {/* Filters Section */}
-              <div className="p-4 border-b border-purple-100 bg-gray-50">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="p-4 bg-gray-50 border-b border-purple-100">
+                <div className="flex flex-wrap gap-4 justify-between items-center">
                   {/* Member filter checkboxes */}
                   <div className="flex flex-col">
-                    <div className="mb-2 flex items-center">
+                    <div className="flex items-center mb-2">
                       <span className="text-sm font-medium text-purple-700">Filter by Member:</span>
                     </div>
-                    <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+                    <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
                       {membersList.map((member, idx) => (
                         <div key={idx} className="flex items-center">
                           <input
                             id={`member-${idx}`}
                             type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                             checked={selectedMembers.includes(member)}
                             onChange={() => handleMemberSelection(member)}
                           />
@@ -763,28 +853,28 @@ const confirmMarkDone = async () => {
                   
                   {/* Date Range Filter */}
                   <div className="flex flex-col">
-                    <div className="mb-2 flex items-center">
+                    <div className="flex items-center mb-2">
                       <span className="text-sm font-medium text-purple-700">Filter by Date Range:</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2 items-center">
                       <div className="flex items-center">
-                        <label htmlFor="start-date" className="text-sm text-gray-700 mr-1">From</label>
+                        <label htmlFor="start-date" className="mr-1 text-sm text-gray-700">From</label>
                         <input
                           id="start-date"
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="text-sm border border-gray-200 rounded-md p-1"
+                          className="p-1 text-sm rounded-md border border-gray-200"
                         />
                       </div>
                       <div className="flex items-center">
-                        <label htmlFor="end-date" className="text-sm text-gray-700 mr-1">To</label>
+                        <label htmlFor="end-date" className="mr-1 text-sm text-gray-700">To</label>
                         <input
                           id="end-date"
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="text-sm border border-gray-200 rounded-md p-1"
+                          className="p-1 text-sm rounded-md border border-gray-200"
                         />
                       </div>
                     </div>
@@ -794,7 +884,7 @@ const confirmMarkDone = async () => {
                   {(selectedMembers.length > 0 || startDate || endDate || searchTerm) && (
                     <button 
                       onClick={resetFilters}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm">
+                      className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200">
                       Clear All Filters
                     </button>
                   )}
@@ -808,9 +898,9 @@ const confirmMarkDone = async () => {
         />
               
               {/* Task Completion Statistics */}
-              <div className="p-4 border-b border-purple-100 bg-blue-50">
+              <div className="p-4 bg-blue-50 border-b border-purple-100">
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-medium text-blue-700 mb-2">Task Completion Statistics:</h3>
+                  <h3 className="mb-2 text-sm font-medium text-blue-700">Task Completion Statistics:</h3>
                   <div className="flex flex-wrap gap-4">
                     <div className="px-3 py-2 bg-white rounded-md shadow-sm">
                       <span className="text-xs text-gray-500">Total Completed</span>
@@ -840,10 +930,10 @@ const confirmMarkDone = async () => {
                   <thead className="bg-gray-50">
                     <tr>
                       {/* Add checkbox column as first column */}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
                           checked={filteredHistoryData.length > 0 && selectedHistoryItems.length === filteredHistoryData.length}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -889,7 +979,7 @@ const confirmMarkDone = async () => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
                               checked={selectedHistoryItems.some(item => item._id === history._id)}
                               onChange={() => {
                                 setSelectedHistoryItems(prev => 
@@ -951,10 +1041,10 @@ const confirmMarkDone = async () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                         checked={filteredAccountData.length > 0 && selectedItems.length === filteredAccountData.length}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -970,15 +1060,15 @@ const confirmMarkDone = async () => {
                     {sheetHeaders.slice(1, 11).map((header) => (
                       <th 
                         key={header.id} 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase"
                       >
                         {header.label}
                       </th>
                     ))}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Upload Image
                     </th>
                   </tr>
@@ -993,7 +1083,7 @@ const confirmMarkDone = async () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
                             checked={selectedItems.includes(account._id)}
                             onChange={() => handleSelectItem(account._id)}
                           />
@@ -1011,7 +1101,7 @@ const confirmMarkDone = async () => {
                             disabled={!selectedItems.includes(account._id)}
                             value={additionalData[account._id] || ""}
                             onChange={(e) => setAdditionalData(prev => ({...prev, [account._id]: e.target.value}))}
-                            className="border border-gray-300 rounded-md px-2 py-1 w-full disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
                           >
                             <option value="">Select...</option>
                             <option value="Yes">Yes</option>
@@ -1024,7 +1114,7 @@ const confirmMarkDone = async () => {
                               <img
                                 src={typeof account.image === 'string' ? account.image : URL.createObjectURL(account.image)}
                                 alt="Receipt"
-                                className="h-10 w-10 object-cover rounded-md mr-2"
+                                className="object-cover mr-2 w-10 h-10 rounded-md"
                               />
                               <div className="flex flex-col">
                                 <span className="text-xs text-gray-500">
@@ -1044,10 +1134,10 @@ const confirmMarkDone = async () => {
                             </div>
                           ) : (
                             <label className={`flex items-center cursor-pointer ${account['col10']?.toUpperCase() === "YES" ? "text-red-600 font-medium" : "text-purple-600"} hover:text-purple-800`}>
-                              <Upload className="h-4 w-4 mr-1" />
+                              <Upload className="mr-1 w-4 h-4" />
                               <span className="text-xs">
                                 {account['col10']?.toUpperCase() === "YES" ? "Required Upload" : "Upload Receipt Image"}
-                                {account['col10']?.toUpperCase() === "YES" && <span className="text-red-500 ml-1">*</span>}
+                                {account['col10']?.toUpperCase() === "YES" && <span className="ml-1 text-red-500">*</span>}
                               </span>
                               <input
                                 type="file" 
