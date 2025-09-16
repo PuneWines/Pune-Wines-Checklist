@@ -346,192 +346,194 @@ export default function AdminDashboard() {
   }
 
   // OPTIMIZED: fetchDepartmentData function with loading states
-  const fetchDepartmentData = async (department) => {
-    if (!department || department === "Select Department") {
-      return
+// OPTIMIZED: fetchDepartmentData function with loading states
+const fetchDepartmentData = async (department) => {
+  if (!department || department === "Select Department") {
+    return
+  }
+
+  const sheetName = dashboardType === "delegation" ? "DELEGATION" : department
+  const cacheKey = `${sheetName}_${dashboardType}`
+
+  // Check cache first - instant return
+  if (dataCache.has(cacheKey)) {
+    const cachedData = dataCache.get(cacheKey)
+    setDepartmentData(cachedData)
+    return
+  }
+
+  try {
+    // ADD: Set loading state for checklist mode only
+    if (dashboardType === "checklist") {
+      setIsDepartmentLoading(true)
     }
 
-    const sheetName = dashboardType === "delegation" ? "DELEGATION" : department
-    const cacheKey = `${sheetName}_${dashboardType}`
+    // Fetch data without any loading states
+    const data = await fetchDataFromAppsScript(sheetName)
 
-    // Check cache first - instant return
-    if (dataCache.has(cacheKey)) {
-      const cachedData = dataCache.get(cacheKey)
-      setDepartmentData(cachedData)
-      return
+    if (!data?.table?.rows) {
+      throw new Error("Invalid data structure")
     }
 
-    try {
-      // ADD: Set loading state for checklist mode only
-      if (dashboardType === "checklist") {
-        setIsDepartmentLoading(true)
+    // Get user info once
+    const username = sessionStorage.getItem("username") || "admin"
+    const userRole = sessionStorage.getItem("role") || "admin"
+    const isAdmin = userRole === "admin"
+    const usernameLower = username.toLowerCase()
+
+    // Pre-calculate date
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayTime = today.getTime()
+
+    // Initialize counters
+    let totalTasks = 0, completedTasks = 0, pendingTasks = 0, overdueTasks = 0
+    let completedRatingOne = 0, completedRatingTwo = 0, completedRatingThreePlus = 0
+
+    // Initialize data structures
+    const monthlyData = {
+      Jan: { completed: 0, pending: 0 }, Feb: { completed: 0, pending: 0 }, Mar: { completed: 0, pending: 0 },
+      Apr: { completed: 0, pending: 0 }, May: { completed: 0, pending: 0 }, Jun: { completed: 0, pending: 0 },
+      Jul: { completed: 0, pending: 0 }, Aug: { completed: 0, pending: 0 }, Sep: { completed: 0, pending: 0 },
+      Oct: { completed: 0, pending: 0 }, Nov: { completed: 0, pending: 0 }, Dec: { completed: 0, pending: 0 }
+    }
+    const statusData = { Completed: 0, Pending: 0, Overdue: 0 }
+    const staffMap = new Map()
+    const processedRows = []
+
+    // Single ultra-fast loop
+    const rows = data.table.rows
+    for (let i = 1, len = rows.length; i < len; i++) {
+      const row = rows[i]
+      if (!row?.c) continue
+
+      const c = row.c
+
+      // Quick user check
+      const assignedTo = c[4]?.v || "Unassigned"
+      if (!isAdmin && assignedTo.toLowerCase() !== usernameLower) continue
+
+      // Quick task ID check
+      const taskId = c[1]?.v
+      if (!taskId) continue
+
+      // Quick date check
+      const taskStartDateValue = c[6]?.v
+      if (!taskStartDateValue) continue
+
+      const taskStartDate = parseGoogleSheetsDate(taskStartDateValue)
+      const taskStartDateObj = parseDateFromDDMMYYYY(taskStartDate)
+      if (!taskStartDateObj) continue
+
+      // Staff tracking
+      if (!staffMap.has(assignedTo)) {
+        staffMap.set(assignedTo, { name: assignedTo, totalTasks: 0, completedTasks: 0, pendingTasks: 0, progress: 0 })
       }
 
-      // Fetch data without any loading states
-      const data = await fetchDataFromAppsScript(sheetName)
+      // Completion check - FIXED for delegation mode
+      const completionDateValue = dashboardType === "delegation" ? c[11]?.v : c[10]?.v
+      const completionDate = completionDateValue ? parseGoogleSheetsDate(completionDateValue) : ""
+      const status = completionDate ? "completed" : (taskStartDateObj.getTime() < todayTime ? "overdue" : "pending")
 
-      if (!data?.table?.rows) {
-        throw new Error("Invalid data structure")
+      // DELEGATION MODE: Count completions based on rating (column Q - index 16)
+      if (dashboardType === "delegation" && status === "completed") {
+        const rating = c[16]?.v // Column Q (index 16) - rating value
+        if (rating === 1) completedRatingOne++
+        else if (rating === 2) completedRatingTwo++
+        else if (rating >= 3) completedRatingThreePlus++ // Changed to >= 3 for "more than twice"
       }
 
-      // Get user info once
-      const username = sessionStorage.getItem("username") || "admin"
-      const userRole = sessionStorage.getItem("role") || "admin"
-      const isAdmin = userRole === "admin"
-      const usernameLower = username.toLowerCase()
+      // Add to processed rows
+      processedRows.push({
+        id: String(taskId).trim(),
+        title: c[5]?.v || "Untitled Task",
+        assignedTo,
+        taskStartDate,
+        dueDate: taskStartDate,
+        status,
+        frequency: c[7]?.v || "one-time",
+      })
 
-      // Pre-calculate date
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayTime = today.getTime()
+      // Update staff
+      const staff = staffMap.get(assignedTo)
+      staff.totalTasks++
 
-      // Initialize counters
-      let totalTasks = 0, completedTasks = 0, pendingTasks = 0, overdueTasks = 0
-      let completedRatingOne = 0, completedRatingTwo = 0, completedRatingThreePlus = 0
+      // Count only tasks up to today
+      if (taskStartDateObj.getTime() <= todayTime) {
+        totalTasks++
 
-      // Initialize data structures
-      const monthlyData = {
-        Jan: { completed: 0, pending: 0 }, Feb: { completed: 0, pending: 0 }, Mar: { completed: 0, pending: 0 },
-        Apr: { completed: 0, pending: 0 }, May: { completed: 0, pending: 0 }, Jun: { completed: 0, pending: 0 },
-        Jul: { completed: 0, pending: 0 }, Aug: { completed: 0, pending: 0 }, Sep: { completed: 0, pending: 0 },
-        Oct: { completed: 0, pending: 0 }, Nov: { completed: 0, pending: 0 }, Dec: { completed: 0, pending: 0 }
-      }
-      const statusData = { Completed: 0, Pending: 0, Overdue: 0 }
-      const staffMap = new Map()
-      const processedRows = []
+        if (status === "completed") {
+          completedTasks++
+          staff.completedTasks++
+          statusData.Completed++
 
-      // Single ultra-fast loop
-      const rows = data.table.rows
-      for (let i = 1, len = rows.length; i < len; i++) {
-        const row = rows[i]
-        if (!row?.c) continue
-
-        const c = row.c
-
-        // Quick user check
-        const assignedTo = c[4]?.v || "Unassigned"
-        if (!isAdmin && assignedTo.toLowerCase() !== usernameLower) continue
-
-        // Quick task ID check
-        const taskId = c[1]?.v
-        if (!taskId) continue
-
-        // Quick date check
-        const taskStartDateValue = c[6]?.v
-        if (!taskStartDateValue) continue
-
-        const taskStartDate = parseGoogleSheetsDate(taskStartDateValue)
-        const taskStartDateObj = parseDateFromDDMMYYYY(taskStartDate)
-        if (!taskStartDateObj) continue
-
-        // Staff tracking
-        if (!staffMap.has(assignedTo)) {
-          staffMap.set(assignedTo, { name: assignedTo, totalTasks: 0, completedTasks: 0, pendingTasks: 0, progress: 0 })
-        }
-
-        // Completion check
-        const completionDateValue = dashboardType === "delegation" ? c[11]?.v : c[10]?.v
-        const completionDate = completionDateValue ? parseGoogleSheetsDate(completionDateValue) : ""
-        const status = completionDate ? "completed" : (taskStartDateObj.getTime() < todayTime ? "overdue" : "pending")
-
-        // Add to processed rows
-        processedRows.push({
-          id: String(taskId).trim(),
-          title: c[5]?.v || "Untitled Task",
-          assignedTo,
-          taskStartDate,
-          dueDate: taskStartDate,
-          status,
-          frequency: c[7]?.v || "one-time",
-        })
-
-        // Update staff
-        const staff = staffMap.get(assignedTo)
-        staff.totalTasks++
-
-        // Count only tasks up to today
-        if (taskStartDateObj.getTime() <= todayTime) {
-          totalTasks++
-
-          if (status === "completed") {
-            completedTasks++
-            staff.completedTasks++
-            statusData.Completed++
-
-            if (dashboardType === "delegation") {
-              const rating = c[17]?.v
-              if (rating === 1) completedRatingOne++
-              else if (rating === 2) completedRatingTwo++
-              else if (rating > 2) completedRatingThreePlus++
+          if (completionDate) {
+            const month = parseDateFromDDMMYYYY(completionDate)
+            if (month) {
+              const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month.getMonth()]
+              monthlyData[monthName].completed++
             }
-
-            if (completionDate) {
-              const month = parseDateFromDDMMYYYY(completionDate)
-              if (month) {
-                const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month.getMonth()]
-                monthlyData[monthName].completed++
-              }
-            }
-          } else {
-            staff.pendingTasks++
-            if (status === "overdue") {
-              overdueTasks++
-              statusData.Overdue++
-            }
-            pendingTasks++
-            statusData.Pending++
-            const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][today.getMonth()]
-            monthlyData[monthName].pending++
           }
+        } else {
+          staff.pendingTasks++
+          if (status === "overdue") {
+            overdueTasks++
+            statusData.Overdue++
+          }
+          pendingTasks++
+          statusData.Pending++
+          const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][today.getMonth()]
+          monthlyData[monthName].pending++
         }
       }
+    }
 
-      // Quick data conversion
-      const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0
-      const barChartData = Object.entries(monthlyData).map(([name, data]) => ({ name, ...data }))
-      const pieChartData = [
-        { name: "Completed", value: statusData.Completed, color: "#22c55e" },
-        { name: "Pending", value: statusData.Pending, color: "#facc15" },
-        { name: "Overdue", value: statusData.Overdue, color: "#ef4444" },
-      ]
+    // Quick data conversion
+    const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0
+    const barChartData = Object.entries(monthlyData).map(([name, data]) => ({ name, ...data }))
+    const pieChartData = [
+      { name: "Completed", value: statusData.Completed, color: "#22c55e" },
+      { name: "Pending", value: statusData.Pending, color: "#facc15" },
+      { name: "Overdue", value: statusData.Overdue, color: "#ef4444" },
+    ]
 
-      const staffMembers = []
-      for (const staff of staffMap.values()) {
-        const progress = staff.totalTasks > 0 ? Math.round((staff.completedTasks / staff.totalTasks) * 100) : 0
-        staffMembers.push({
-          id: staff.name.replace(/\s+/g, "-").toLowerCase(),
-          name: staff.name,
-          email: `${staff.name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-          totalTasks: staff.totalTasks,
-          completedTasks: staff.completedTasks,
-          pendingTasks: staff.pendingTasks,
-          progress,
-        })
-      }
+    const staffMembers = []
+    for (const staff of staffMap.values()) {
+      const progress = staff.totalTasks > 0 ? Math.round((staff.completedTasks / staff.totalTasks) * 100) : 0
+      staffMembers.push({
+        id: staff.name.replace(/\s+/g, "-").toLowerCase(),
+        name: staff.name,
+        email: `${staff.name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+        totalTasks: staff.totalTasks,
+        completedTasks: staff.completedTasks,
+        pendingTasks: staff.pendingTasks,
+        progress,
+      })
+    }
 
-      // Final data
-      const finalData = {
-        allTasks: processedRows,
-        staffMembers,
-        totalTasks, completedTasks, pendingTasks, overdueTasks,
-        activeStaff: departmentData.activeStaff,
-        completionRate, barChartData, pieChartData,
-        completedRatingOne, completedRatingTwo, completedRatingThreePlus,
-      }
+    // Final data
+    const finalData = {
+      allTasks: processedRows,
+      staffMembers,
+      totalTasks, completedTasks, pendingTasks, overdueTasks,
+      activeStaff: departmentData.activeStaff,
+      completionRate, barChartData, pieChartData,
+      completedRatingOne, completedRatingTwo, completedRatingThreePlus,
+    }
 
-      // Cache and set
-      setDataCache(prev => new Map(prev).set(cacheKey, finalData))
-      setDepartmentData(finalData)
+    // Cache and set
+    setDataCache(prev => new Map(prev).set(cacheKey, finalData))
+    setDepartmentData(finalData)
 
-    } catch (error) {
-      alert(`Error loading data: ${error.message}`)
-    } finally {
-      // ADD: Clear loading state
-      if (dashboardType === "checklist") {
-        setIsDepartmentLoading(false)
-      }
+  } catch (error) {
+    alert(`Error loading data: ${error.message}`)
+  } finally {
+    // ADD: Clear loading state
+    if (dashboardType === "checklist") {
+      setIsDepartmentLoading(false)
     }
   }
+}
 
   // FIXED: Clear data immediately when switching dashboard types to prevent flash
   useEffect(() => {
@@ -1113,28 +1115,27 @@ const StaffTasksTable = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-all bg-white">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-tr-lg p-4">
-              <h3 className="text-sm font-medium text-blue-700">Total Tasks</h3>
-              <ListTodo className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="p-4">
-              <div className="text-3xl font-bold text-blue-700">
-                {dashboardType === "delegation"
-                  ? getTasksByView("recent").length +
-                  getTasksByView("upcoming").length +
-                  getTasksByView("overdue").length
-                  : departmentData.totalTasks}
-              </div>
-              <p className="text-xs text-blue-600">
-                {dashboardType === "delegation"
-                  ? "Total tasks in delegation (all categories)"
-                  : selectedMasterOption !== "Select Department"
-                    ? `Total tasks in ${selectedMasterOption} (up to today)`
-                    : "Select a department"}
-              </p>
-            </div>
-          </div>
+         <div className="rounded-lg border border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-all bg-white">
+  <div className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-tr-lg p-4">
+    <h3 className="text-sm font-medium text-blue-700">Total Tasks</h3>
+    <ListTodo className="h-4 w-4 text-blue-500" />
+  </div>
+  <div className="p-4">
+    <div className="text-3xl font-bold text-blue-700">
+      {/* FIXED: For delegation mode, show the actual count from column B */}
+      {dashboardType === "delegation"
+        ? departmentData.allTasks.length  // This counts all rows from column B
+        : departmentData.totalTasks}
+    </div>
+    <p className="text-xs text-blue-600">
+      {dashboardType === "delegation"
+        ? "Total tasks in delegation sheet (all entries in column B)"
+        : selectedMasterOption !== "Select Department"
+          ? `Total tasks in ${selectedMasterOption} (up to today)`
+          : "Select a department"}
+    </p>
+  </div>
+</div>
 
           <div className="rounded-lg border border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition-all bg-white">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-green-50 to-green-100 rounded-tr-lg p-4">
