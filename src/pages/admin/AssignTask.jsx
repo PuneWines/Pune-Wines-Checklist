@@ -212,86 +212,108 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     setFilteredDoerOptions(filtered.map(doer => doer.name));
   };
 
-  // Function to fetch ALL data from master sheet
-  const fetchMasterSheetOptions = async () => {
-    try {
-      const masterSheetId = "1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs";
-      const masterSheetName = "master";
+ // DON'T SLICE - Check ALL rows including row 0
+const fetchMasterSheetOptions = async () => {
+  try {
+    const username = sessionStorage.getItem("username") || ""
+    const userRole = sessionStorage.getItem("role") || ""
+    const isAdmin = userRole.toLowerCase() === "admin"
 
-      const url = `https://docs.google.com/spreadsheets/d/${masterSheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
-        masterSheetName
-      )}`;
+    const masterSheetId = "1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs";
+    const masterSheetName = "MASTER";
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch master data: ${response.status}`);
-      }
+    const url = `https://docs.google.com/spreadsheets/d/${masterSheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
+      masterSheetName
+    )}`;
 
-      const text = await response.text();
-      const jsonStart = text.indexOf("{");
-      const jsonEnd = text.lastIndexOf("}");
-      const jsonString = text.substring(jsonStart, jsonEnd + 1);
-      const data = JSON.parse(jsonString);
-
-      if (!data.table || !data.table.rows) {
-        console.log("No master data found");
-        return;
-      }
-
-      const shopNames = [];
-      const givenBy = [];
-      const doerData = [];
-
-      // Process all rows starting from index 1 (skip header)
-      data.table.rows.slice(1).forEach((row) => {
-        if (row.c) {
-          // Column A - Shop Name
-          const shopName = row.c[0] && row.c[0].v ? row.c[0].v.toString().trim() : "";
-          // Column B - Given By
-          const givenByValue = row.c[1] && row.c[1].v ? row.c[1].v.toString().trim() : "";
-          // Column C - Doer's Name (index 2)
-          const doerName = row.c[2] && row.c[2].v ? row.c[2].v.toString().trim() : "";
-          // Column F - Shop (index 5)
-          const shop = row.c[5] && row.c[5].v ? row.c[5].v.toString().trim() : "";
-
-          // Collect shop names from column A
-          if (shopName !== "") {
-            shopNames.push(shopName);
-          }
-
-          // Collect Given By from column B
-          if (givenByValue !== "") {
-            givenBy.push(givenByValue);
-          }
-
-          // Collect doer data (name and associated shop from column F)
-          if (doerName !== "" && shop !== "") {
-            doerData.push({
-              name: doerName,
-              shop: shop
-            });
-          }
-        }
-      });
-
-      // Remove duplicates and sort
-      setDepartmentOptions([...new Set(shopNames)].sort());
-      setGivenByOptions([...new Set(givenBy)].sort());
-      setAllDoerOptions(doerData);
-
-      console.log("Master sheet options loaded successfully", {
-        shopNames: [...new Set(shopNames)],
-        givenBy: [...new Set(givenBy)],
-        doerData: doerData,
-      });
-    } catch (error) {
-      console.error("Error fetching master sheet options:", error);
-      // Set default options if fetch fails
-      setDepartmentOptions(["Shop 1", "Shop 2"]);
-      setGivenByOptions(["User 1", "User 2"]);
-      setAllDoerOptions([]);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch master data: ${response.status}`);
     }
-  };
+
+    const text = await response.text();
+    const jsonStart = text.indexOf("{");
+    const jsonEnd = text.lastIndexOf("}");
+    const jsonString = text.substring(jsonStart, jsonEnd + 1);
+    const data = JSON.parse(jsonString);
+
+    if (!data.table || !data.table.rows) {
+      console.log("No master data found");
+      return;
+    }
+
+    console.log("=== ALL ROWS (NO SLICE) ===")
+    console.log("Total rows:", data.table.rows.length)
+    
+    // Check first 5 rows WITHOUT slicing
+    for (let i = 0; i < Math.min(5, data.table.rows.length); i++) {
+      console.log(`API Row ${i}:`, {
+        'C (username)': data.table.rows[i]?.c?.[2]?.v,
+        'E (role)': data.table.rows[i]?.c?.[4]?.v,
+        'J (access)': data.table.rows[i]?.c?.[9]?.v
+      })
+    }
+
+    // NOW FIND ADMIN - check ALL rows, not just after slice
+    const allRows = data.table.rows.map((row, index) => ({
+      apiIndex: index,
+      userName: row?.c?.[2]?.v,
+      userRole: row?.c?.[4]?.v,
+      accessDepartments: row?.c?.[9]?.v
+    }))
+
+    console.log("=== SEARCHING IN ALL ROWS ===")
+    const adminRow = allRows.find(item => 
+      item.userRole?.toLowerCase() === "admin" && 
+      item.userName?.toLowerCase() === username.toLowerCase()
+    )
+    
+    console.log("Admin row found at:", adminRow)
+
+    let accessibleDepartments = []
+
+    if (adminRow && adminRow.accessDepartments) {
+      accessibleDepartments = adminRow.accessDepartments
+        .split(',')
+        .map(dept => dept.trim())
+        .filter(dept => dept !== "")
+    }
+
+    // Now process data - slice(1) to skip header
+    const givenBy = [];
+    const doerData = [];
+
+    data.table.rows.slice(0).forEach((row) => {
+      if (row.c) {
+        const givenByValue = row.c[1] && row.c[1].v ? row.c[1].v.toString().trim() : "";
+        const doerName = row.c[2] && row.c[2].v ? row.c[2].v.toString().trim() : "";
+        const shop = row.c[5] && row.c[5].v ? row.c[5].v.toString().trim() : "";
+
+        if (givenByValue !== "") {
+          givenBy.push(givenByValue);
+        }
+
+        if (doerName !== "" && shop !== "" && accessibleDepartments.includes(shop)) {
+          doerData.push({
+            name: doerName,
+            shop: shop
+          });
+        }
+      }
+    });
+
+    setDepartmentOptions([...new Set(accessibleDepartments)].sort());
+    setGivenByOptions([...new Set(givenBy)].sort());
+    setAllDoerOptions(doerData);
+
+    console.log("Final departments:", accessibleDepartments)
+  } catch (error) {
+    console.error("Error:", error);
+    setDepartmentOptions([]);
+    setGivenByOptions([]);
+    setAllDoerOptions([]);
+  }
+};
 
   // Update date display format
   const getFormattedDate = (date) => {

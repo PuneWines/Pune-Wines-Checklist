@@ -266,84 +266,148 @@ export default function AdminDashboard() {
       throw error
     }
   }
+// FIXED: Don't auto-select, keep "Select Department" as default
+const fetchMasterSheetColumnA = async () => {
+  try {
+    setIsFetchingMaster(true)
 
-  // OPTIMIZED: Function to fetch master sheet data with preloading
-  const fetchMasterSheetColumnA = async () => {
-    try {
-      setIsFetchingMaster(true)
+    const username = sessionStorage.getItem("username") || ""
+    const userRole = sessionStorage.getItem("role") || ""
+    const isAdmin = userRole.toLowerCase() === "admin"
 
-      const data = await fetchDataFromAppsScript("MASTER")
+    console.log("Current User:", username, "Role:", userRole, "Is Admin:", isAdmin)
 
-      if (data?.table?.rows) {
-        // Quick extraction
-        const columnAValues = data.table.rows
-          .slice(1)
-          .map(row => row?.c?.[0]?.v)
-          .filter(value => value !== null && value !== undefined && value !== "")
+    const data = await fetchDataFromAppsScript("MASTER")
 
-        const options = ["Select Department", ...columnAValues]
-        setMasterSheetOptions(options)
-
-        if (!selectedMasterOption) {
-          setSelectedMasterOption(options[0])
-          
-          // ADD: Preload first real department data in background for faster access
-          if (options.length > 1 && dashboardType === "checklist") {
-            const firstDepartment = options[1]
-            setTimeout(() => {
-              fetchDepartmentData(firstDepartment)
-            }, 100) // Small delay to not block UI
-          }
-        }
-
-        // Count active staff quickly
-        const activeStaffCount = data.table.rows
-          .slice(1)
-          .filter(row => row?.c?.[2]?.v !== null && row?.c?.[2]?.v !== undefined && row?.c?.[2]?.v !== "")
-          .length
-
-        setDepartmentData(prev => ({ ...prev, activeStaff: activeStaffCount }))
-        return
-      }
-
-      // Fallback to gviz only if Apps Script completely fails
-      const response = await fetch(
-        `https://docs.google.com/spreadsheets/d/1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs/gviz/tq?tqx=out:json&sheet=MASTER`
+    if (data?.table?.rows) {
+      const masterData = data.table.rows.slice(1).map(row => ({
+        department: row?.c?.[0]?.v,
+        userName: row?.c?.[2]?.v,       // Column C
+        userRole: row?.c?.[4]?.v,
+        accessDepartments: row?.c?.[9]?.v
+      })).filter(item => 
+        item.userName !== null && 
+        item.userName !== undefined && 
+        item.userName !== ""
       )
 
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
+      let accessibleDepartments = []
 
-      const text = await response.text()
-      const jsonStart = text.indexOf("{")
-      const jsonEnd = text.lastIndexOf("}")
-      const jsonString = text.substring(jsonStart, jsonEnd + 1)
-      const fallbackData = JSON.parse(jsonString)
-
-      const columnAValues = fallbackData.table.rows
-        .slice(1)
-        .map(row => row?.c?.[0]?.v)
-        .filter(value => value !== null && value !== "")
-
-      const options = ["Select Department", ...columnAValues]
-      setMasterSheetOptions(options)
-
-      if (!selectedMasterOption) {
-        setSelectedMasterOption(options[0])
+      if (isAdmin) {
+        const adminRow = masterData.find(item => 
+          item.userRole?.toLowerCase() === "admin" && 
+          item.userName?.toLowerCase() === username.toLowerCase()
+        )
+        
+        if (adminRow && adminRow.accessDepartments) {
+          accessibleDepartments = adminRow.accessDepartments
+            .split(',')
+            .map(dept => dept.trim())
+            .filter(dept => dept !== "")
+        }
+      } else {
+        const userRow = masterData.find(item => 
+          item.userRole?.toLowerCase() === userRole.toLowerCase() && 
+          item.userName?.toLowerCase() === username.toLowerCase()
+        )
+        
+        if (userRow && userRow.accessDepartments) {
+          accessibleDepartments = userRow.accessDepartments
+            .split(',')
+            .map(dept => dept.trim())
+            .filter(dept => dept !== "")
+        }
       }
 
-      const activeStaffCount = fallbackData.table.rows
+      const options = ["Select Department", ...accessibleDepartments]
+      
+      setMasterSheetOptions(options)
+
+      // REMOVED: Auto-selection logic
+      // Keep "Select Department" as default - user must manually select
+      if (!selectedMasterOption) {
+        setSelectedMasterOption("Select Department")
+      }
+
+      const activeStaffCount = data.table.rows
         .slice(1)
-        .filter(row => row?.c?.[2]?.v !== null && row?.c?.[2]?.v !== "")
+        .filter(row => row?.c?.[2]?.v !== null && row?.c?.[2]?.v !== undefined && row?.c?.[2]?.v !== "")
         .length
 
       setDepartmentData(prev => ({ ...prev, activeStaff: activeStaffCount }))
-
-    } catch (error) {
-      setMasterSheetOptions(["Error loading master data"])
-    } finally {
-      setIsFetchingMaster(false)
+      return
     }
+
+    // Fallback code
+    const response = await fetch(
+      `https://docs.google.com/spreadsheets/d/1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs/gviz/tq?tqx=out:json&sheet=MASTER`
+    )
+
+    if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
+
+    const text = await response.text()
+    const jsonStart = text.indexOf("{")
+    const jsonEnd = text.lastIndexOf("}")
+    const jsonString = text.substring(jsonStart, jsonEnd + 1)
+    const fallbackData = JSON.parse(jsonString)
+
+    const fallbackMasterData = fallbackData.table.rows.slice(1).map(row => ({
+      department: row?.c?.[0]?.v,
+      userName: row?.c?.[2]?.v,
+      userRole: row?.c?.[4]?.v,
+      accessDepartments: row?.c?.[9]?.v
+    })).filter(item => item.userName !== null && item.userName !== undefined && item.userName !== "")
+
+    let accessibleDepartments = []
+
+    if (isAdmin) {
+      const adminRow = fallbackMasterData.find(item => 
+        item.userRole?.toLowerCase() === "admin" && 
+        item.userName?.toLowerCase() === username.toLowerCase()
+      )
+      
+      if (adminRow && adminRow.accessDepartments) {
+        accessibleDepartments = adminRow.accessDepartments
+          .split(',')
+          .map(dept => dept.trim())
+          .filter(dept => dept !== "")
+      }
+    } else {
+      const userRow = fallbackMasterData.find(item => 
+        item.userRole?.toLowerCase() === userRole.toLowerCase() && 
+        item.userName?.toLowerCase() === username.toLowerCase()
+      )
+      
+      if (userRow && userRow.accessDepartments) {
+        accessibleDepartments = userRow.accessDepartments
+          .split(',')
+          .map(dept => dept.trim())
+          .filter(dept => dept !== "")
+      }
+    }
+
+    const options = ["Select Department", ...accessibleDepartments]
+    
+    setMasterSheetOptions(options)
+
+    if (!selectedMasterOption) {
+      setSelectedMasterOption("Select Department")
+    }
+
+    const activeStaffCount = fallbackData.table.rows
+      .slice(1)
+      .filter(row => row?.c?.[2]?.v !== null && row?.c?.[2]?.v !== "")
+      .length
+
+    setDepartmentData(prev => ({ ...prev, activeStaff: activeStaffCount }))
+
+  } catch (error) {
+    console.error("Error loading master data:", error)
+    setMasterSheetOptions(["Error loading master data"])
+  } finally {
+    setIsFetchingMaster(false)
   }
+}
 
   // OPTIMIZED: fetchDepartmentData function with loading states
 // OPTIMIZED: fetchDepartmentData function with loading states
