@@ -17,7 +17,7 @@ import AccountDataPage from "./pages/delegation";
 import License from "./pages/License";
 import TrainingVideo from "./pages/TrainingVideo";
 import "./index.css";
-
+// import SalesDataPage from "./pages/admin/SalesDataPage"
 // Auth wrapper component to protect routes
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const username = sessionStorage.getItem("username");
@@ -110,14 +110,16 @@ function App() {
         />
 
         {/* Data routes */}
-        <Route
-          path="/dashboard/data/:category"
-          element={
-            <ProtectedRoute>
-              <DataPage />
-            </ProtectedRoute>
-          }
-        />
+    <Route
+  path="/dashboard/data/:department"  // Yeh ":department" hona chahiye
+  element={
+    <ProtectedRoute>
+      <DataPage />
+    </ProtectedRoute>
+  }
+/>
+
+
         <Route
           path="/dashboard/license"
           element={
