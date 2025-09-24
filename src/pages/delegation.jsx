@@ -206,7 +206,9 @@ const handleHistoryDelete = async () => {
     return;
   }
 
- 
+  const confirmClear = window.confirm(
+    `This will move ${selectedHistoryItemsArray.length} record(s) from history back to pending tasks. Continue?`
+  );
   if (!confirmClear) return;
 
   setIsDeletingHistory(true);
