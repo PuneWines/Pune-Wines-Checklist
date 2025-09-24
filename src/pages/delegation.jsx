@@ -51,6 +51,9 @@ function useDebounce(value, delay) {
 }
 
 function DelegationDataPage() {
+
+
+  console.log("Component is rendering...");
   const [accountData, setAccountData] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,6 +71,8 @@ function DelegationDataPage() {
   const [endDate, setEndDate] = useState("");
   const [userRole, setUserRole] = useState("");
   const [username, setUsername] = useState("");
+const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set());
+const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
   // Debounced search term for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -144,6 +149,193 @@ function DelegationDataPage() {
       (typeof value === "string" && value.trim() === "")
     );
   }, []);
+
+
+
+const handleSelectHistoryItem = useCallback((id, isChecked) => {
+  console.log(`History checkbox action: ${id} -> ${isChecked}`);
+
+  setSelectedHistoryItems((prev) => {
+    const newSelected = new Set(prev);
+
+    if (isChecked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+
+    console.log(`Updated history selection: ${Array.from(newSelected)}`);
+    return newSelected;
+  });
+}, []);
+
+const handleHistoryCheckboxClick = useCallback(
+  (e, id) => {
+    e.stopPropagation();
+    const isChecked = e.target.checked;
+    console.log(`History checkbox clicked: ${id}, checked: ${isChecked}`);
+    handleSelectHistoryItem(id, isChecked);
+  },
+  [handleSelectHistoryItem]
+);
+
+const handleSelectAllHistoryItems = useCallback(
+  (e) => {
+    e.stopPropagation();
+    const checked = e.target.checked;
+    console.log(`Select all history clicked: ${checked}`);
+
+    if (checked) {
+      const allIds = historyData.map((item) => item._id);
+      setSelectedHistoryItems(new Set(allIds));
+      console.log(`Selected all history items: ${allIds}`);
+    } else {
+      setSelectedHistoryItems(new Set());
+      console.log("Cleared all history selections");
+    }
+  },
+  [historyData]
+);
+
+
+const handleHistoryDelete = async () => {
+  const selectedHistoryItemsArray = Array.from(selectedHistoryItems);
+
+  if (selectedHistoryItemsArray.length === 0) {
+    alert("Please select at least one item to move back to pending");
+    return;
+  }
+
+ 
+  if (!confirmClear) return;
+
+  setIsDeletingHistory(true);
+  
+  try {
+    console.log("Starting move to pending operation for items:", selectedHistoryItemsArray);
+
+    const successfulMoves = [];
+    const failedMoves = [];
+
+    // Process each selected history item
+    for (const id of selectedHistoryItemsArray) {
+      const item = historyData.find((h) => h._id === id);
+      if (!item) {
+        failedMoves.push({ id, error: "Item not found in history data" });
+        continue;
+      }
+
+      const taskId = item["col1"];
+      if (!taskId) {
+        failedMoves.push({ id, error: "No Task ID found" });
+        continue;
+      }
+
+      console.log("Moving task to pending:", taskId);
+
+      const formData = new FormData();
+      formData.append("sourceSheetName", CONFIG.SOURCE_SHEET_NAME); // DELEGATION
+      formData.append("targetSheetName", CONFIG.TARGET_SHEET_NAME); // DELEGATION DONE
+      formData.append("action", "clearColumnLAndDeleteHistory");
+      formData.append("taskId", taskId);
+
+      try {
+        const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+          method: "POST",
+          body: formData,
+          headers: { 
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseText = await response.text();
+        console.log("Response for task", taskId, ":", responseText);
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          // If it's not JSON, check if it contains success message
+          if (responseText.toLowerCase().includes("success")) {
+            result = { success: true, message: responseText };
+          } else {
+            throw new Error(`Invalid JSON response: ${responseText}`);
+          }
+        }
+
+        if (result.success) {
+          successfulMoves.push({ id, taskId, message: result.message });
+          console.log(`✅ Successfully moved task to pending: ${taskId}`);
+        } else {
+          failedMoves.push({ 
+            id, 
+            taskId, 
+            error: result.error || "Unknown error" 
+          });
+        }
+
+      } catch (error) {
+        console.error(`Error moving task ${taskId} to pending:`, error);
+        failedMoves.push({ 
+          id, 
+          taskId, 
+          error: error.message 
+        });
+      }
+
+      // Small delay to avoid overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Update UI based on results
+    if (successfulMoves.length > 0) {
+      // Remove successfully moved items from history view IMMEDIATELY
+      const successfulIds = successfulMoves.map(item => item.id);
+      setHistoryData((prev) => 
+        prev.filter(item => !successfulIds.includes(item._id))
+      );
+      
+      // Clear selections
+      setSelectedHistoryItems(new Set());
+      
+      // Show success message
+      setSuccessMessage(
+        `✅ Successfully moved ${successfulMoves.length} item(s) back to pending tasks.` +
+        (failedMoves.length > 0 ? ` ${failedMoves.length} item(s) failed.` : "")
+      );
+      
+      // Refresh BOTH pending and history data after 2 seconds
+      setTimeout(() => {
+        fetchSheetData(); // This will refresh both pending and history
+      }, 2000);
+    }
+
+    if (failedMoves.length > 0) {
+      // Show detailed error for failures
+      const errorDetails = failedMoves.map(f => 
+        `Task ${f.taskId}: ${f.error}`
+      ).join('\n');
+      
+      alert(`Some items failed to move:\n\n${errorDetails}`);
+    }
+
+    setTimeout(() => setSuccessMessage(""), 8000);
+    
+  } catch (error) {
+    console.error("Move to pending error:", error);
+    alert("Error moving items to pending: " + error.message);
+  } finally {
+    setIsDeletingHistory(false);
+  }
+};
+
+
+
+
 
   useEffect(() => {
     const role = sessionStorage.getItem("role");
@@ -636,10 +828,12 @@ function DelegationDataPage() {
     });
   }, []);
 
-  const toggleHistory = useCallback(() => {
-    setShowHistory((prev) => !prev);
-    resetFilters();
-  }, [resetFilters]);
+const toggleHistory = useCallback(() => {
+  setShowHistory((prev) => !prev);
+  resetFilters();
+  // Clear selections when switching views
+  setSelectedHistoryItems(new Set());
+}, [resetFilters]);
 
   const handleSubmit = async () => {
     const selectedItemsArray = Array.from(selectedItems);
@@ -815,7 +1009,7 @@ function DelegationDataPage() {
   };
 
   const selectedItemsCount = selectedItems.size;
-
+const selectedHistoryItemsCount = selectedHistoryItems.size;
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -825,53 +1019,71 @@ function DelegationDataPage() {
               ? CONFIG.PAGE_CONFIG.historyTitle
               : CONFIG.PAGE_CONFIG.title}
           </h1>
+<div className="flex space-x-4">
+  <div className="relative">
+    <Search
+      className="absolute left-3 top-1/2 text-gray-400 transform -translate-y-1/2"
+      size={18}
+    />
+    <input
+      type="text"
+      placeholder={
+        showHistory ? "Search by Task ID..." : "Search tasks..."
+      }
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="py-2 pr-4 pl-10 rounded-md border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+    />
+  </div>
 
-          <div className="flex space-x-4">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 text-gray-400 transform -translate-y-1/2"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder={
-                  showHistory ? "Search by Task ID..." : "Search tasks..."
-                }
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="py-2 pr-4 pl-10 rounded-md border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+  <button
+    onClick={toggleHistory}
+    className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+  >
+    {showHistory ? (
+      <div className="flex items-center">
+        <ArrowLeft className="mr-1 w-4 h-4" />
+        <span>Back to Tasks</span>
+      </div>
+    ) : (
+      <div className="flex items-center">
+        <History className="mr-1 w-4 h-4" />
+        <span>View History</span>
+      </div>
+    )}
+  </button>
 
-            <button
-              onClick={toggleHistory}
-              className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              {showHistory ? (
-                <div className="flex items-center">
-                  <ArrowLeft className="mr-1 w-4 h-4" />
-                  <span>Back to Tasks</span>
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <History className="mr-1 w-4 h-4" />
-                  <span>View History</span>
-                </div>
-              )}
-            </button>
+  {/* Clear Button - Only show in history view, after Back to Tasks button */}
+{showHistory && (
+  <button
+    onClick={handleHistoryDelete}
+    disabled={selectedHistoryItemsCount === 0 || isDeletingHistory}
+    className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    <div className="flex items-center">
+      <ArrowLeft className="mr-1 w-4 h-4" />
+      <span>
+        {isDeletingHistory 
+          ? "Moving to Pending..." 
+          : `Cancle Actual (${selectedHistoryItemsCount})`
+        }
+      </span>
+    </div>
+  </button>
+)}
 
-            {!showHistory && (
-              <button
-                onClick={handleSubmit}
-                disabled={selectedItemsCount === 0 || isSubmitting}
-                className="px-4 py-2 text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-md hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting
-                  ? "Processing..."
-                  : `Submit Selected (${selectedItemsCount})`}
-              </button>
-            )}
-          </div>
+  {!showHistory && (
+    <button
+      onClick={handleSubmit}
+      disabled={selectedItemsCount === 0 || isSubmitting}
+      className="px-4 py-2 text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-md hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {isSubmitting
+        ? "Processing..."
+        : `Submit Selected (${selectedItemsCount})`}
+    </button>
+  )}
+</div>
         </div>
 
         {successMessage && (
@@ -979,137 +1191,158 @@ function DelegationDataPage() {
               {/* History Table */}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Timestamp
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Task ID
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Task
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Next Target Date
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Remarks
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Uploaded Image
-                      </th>
-                      {userRole === "admin" && (
-                        <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                          User
-                        </th>
-                      )}
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                        Given By
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredHistoryData.length > 0 ? (
-                      filteredHistoryData.map((history) => (
-                        <tr key={history._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {history["col0"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {history["col1"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 min-w-[250px]">
-                            <div
-                              className="max-w-md text-sm text-gray-900 whitespace-normal break-words"
-                              title={history["col8"]}
-                            >
-                              {history["col8"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                history["col2"] === "Done"
-                                  ? "bg-green-100 text-green-800"
-                                  : history["col2"] === "Extend date"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {history["col2"] || "—"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {formatDateForDisplay(history["col3"]) || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 bg-purple-50 min-w-[200px]">
-                            <div
-                              className="max-w-md text-sm text-gray-900 whitespace-normal break-words"
-                              title={history["col4"]}
-                            >
-                              {history["col4"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {history["col5"] ? (
-                              <a
-                                href={history["col5"]}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center text-blue-600 underline hover:text-blue-800"
-                              >
-                                <img
-                                  src={
-                                    history["col5"] || "/api/placeholder/32/32"
-                                  }
-                                  alt="Attachment"
-                                  className="object-cover mr-2 w-8 h-8 rounded-md"
-                                />
-                                View
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">
-                                No attachment
-                              </span>
-                            )}
-                          </td>
-                          {userRole === "admin" && (
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col7"] || "—"}
-                              </div>
-                            </td>
-                          )}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {history["col9"] || "—"}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={userRole === "admin" ? 9 : 8}
-                          className="px-6 py-4 text-center text-gray-500"
-                        >
-                          {searchTerm || startDate || endDate
-                            ? "No historical records matching your filters"
-                            : "No completed records found"}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
+                <thead className="bg-gray-50">
+  <tr>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      <input
+        type="checkbox"
+        className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+        checked={
+          filteredHistoryData.length > 0 &&
+          selectedHistoryItems.size === filteredHistoryData.length
+        }
+        onChange={handleSelectAllHistoryItems}
+      />
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Timestamp
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Task ID
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Task
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Status
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Next Target Date
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Remarks
+    </th>
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Uploaded Image
+    </th>
+    {userRole === "admin" && (
+      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+        User
+      </th>
+    )}
+    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+      Given By
+    </th>
+  </tr>
+</thead>
+                 <tbody className="bg-white divide-y divide-gray-200">
+  {filteredHistoryData.length > 0 ? (
+    filteredHistoryData.map((history) => {
+      const isHistorySelected = selectedHistoryItems.has(history._id);
+      return (
+        <tr 
+          key={history._id} 
+          className={`${isHistorySelected ? "bg-green-50" : ""} hover:bg-gray-50`}
+        >
+          <td className="px-6 py-4 whitespace-nowrap">
+            <input
+              type="checkbox"
+              className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+              checked={isHistorySelected}
+              onChange={(e) => handleHistoryCheckboxClick(e, history._id)}
+            />
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="text-sm font-medium text-gray-900">
+              {history["col0"] || "—"}
+            </div>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="text-sm text-gray-900">
+              {history["col1"] || "—"}
+            </div>
+          </td>
+          <td className="px-6 py-4 min-w-[250px]">
+            <div
+              className="max-w-md text-sm text-gray-900 whitespace-normal break-words"
+              title={history["col8"]}
+            >
+              {history["col8"] || "—"}
+            </div>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <span
+              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                history["col2"] === "Done"
+                  ? "bg-green-100 text-green-800"
+                  : history["col2"] === "Extend date"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-gray-100 text-gray-800"
+              }`}
+            >
+              {history["col2"] || "—"}
+            </span>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="text-sm text-gray-900">
+              {formatDateForDisplay(history["col3"]) || "—"}
+            </div>
+          </td>
+          <td className="px-6 py-4 bg-purple-50 min-w-[200px]">
+            <div
+              className="max-w-md text-sm text-gray-900 whitespace-normal break-words"
+              title={history["col4"]}
+            >
+              {history["col4"] || "—"}
+            </div>
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
+            {history["col5"] ? (
+              <a
+                href={history["col5"]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-blue-600 underline hover:text-blue-800"
+              >
+                <img
+                  src={history["col5"] || "/api/placeholder/32/32"}
+                  alt="Attachment"
+                  className="object-cover mr-2 w-8 h-8 rounded-md"
+                />
+                View
+              </a>
+            ) : (
+              <span className="text-gray-400">No attachment</span>
+            )}
+          </td>
+          {userRole === "admin" && (
+            <td className="px-6 py-4 whitespace-nowrap">
+              <div className="text-sm text-gray-900">
+                {history["col7"] || "—"}
+              </div>
+            </td>
+          )}
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="text-sm text-gray-900">
+              {history["col9"] || "—"}
+            </div>
+          </td>
+        </tr>
+      );
+    })
+  ) : (
+    <tr>
+      <td
+        colSpan={userRole === "admin" ? 10 : 9}
+        className="px-6 py-4 text-center text-gray-500"
+      >
+        {searchTerm || startDate || endDate
+          ? "No historical records matching your filters"
+          : "No completed records found"}
+      </td>
+    </tr>
+  )}
+</tbody>
                 </table>
               </div>
             </>
