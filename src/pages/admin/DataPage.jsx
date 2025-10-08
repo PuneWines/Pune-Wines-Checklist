@@ -106,7 +106,7 @@ export default function DataPage() {
     "madhura": WarehouseDataPage,
     "friends": PurchaseDataPage,
     "kunal-ulwe": DirectorDataPage,
-    "tls-ulew": ManagingDirector,
+    "tls-ulwe": ManagingDirector,
   }
 
   console.log("🔍 Available departments:", Object.keys(departmentComponents))
