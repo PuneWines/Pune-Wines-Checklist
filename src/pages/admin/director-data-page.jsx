@@ -1717,7 +1717,7 @@ function AccountDataPage() {
           { id: "col3", label: "Given By", type: "string" },
           { id: "col4", label: "Name", type: "string" },
           { id: "col5", label: "Task Description", type: "string" },
-          { id: "col6", label: "Task Start Date", type: "datetime-local" },
+          { id: "col6", label: "Task Start Date", type: "date" },
           { id: "col7", label: "Freq", type: "string" },
           { id: "col8", label: "Enable Reminders", type: "string" },
           { id: "col9", label: "Require Attachment", type: "string" },
@@ -2475,7 +2475,7 @@ const handleSubmit = async () => {
                         Task Description
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
-                        End Date
+                        Task Start Date
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Freq
@@ -2628,7 +2628,7 @@ const handleSubmit = async () => {
                       Task Description
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
-                      End Date
+                      Task Start Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Freq
