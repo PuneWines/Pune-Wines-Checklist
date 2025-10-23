@@ -1642,6 +1642,9 @@ function AccountDataPage() {
         }
       }
 
+      console.log("=== RAW DATA FROM GOOGLE APPS SCRIPT ===");
+    console.log("Complete data:", data);
+
       const currentUsername = sessionStorage.getItem("username")
       const currentUserRole = sessionStorage.getItem("role")
 
@@ -1716,7 +1719,7 @@ function AccountDataPage() {
           { id: "col3", label: "Given By", type: "string" },
           { id: "col4", label: "Name", type: "string" },
           { id: "col5", label: "Task Description", type: "string" },
-          { id: "col6", label: "Task Start Date", type: "date" },
+          { id: "col6", label: "Task Start Date", type: "datetime-local" },
           { id: "col7", label: "Freq", type: "string" },
           { id: "col8", label: "Enable Reminders", type: "string" },
           { id: "col9", label: "Require Attachment", type: "string" },
@@ -1766,6 +1769,13 @@ function AccountDataPage() {
       setAccountData(pendingAccounts)
       setHistoryData(historyRows)
       setLoading(false)
+      console.log("=== FINAL ACCOUNT DATA CHECK ===");
+if (pendingAccounts.length > 0) {
+  console.log("First 3 accounts Column G values:");
+  pendingAccounts.slice(0, 3).forEach((acc, idx) => {
+    console.log(`Account ${idx + 1} - col6:`, acc.col6, "Type:", typeof acc.col6);
+  });
+}
     } catch (error) {
       console.error("Error fetching sheet data:", error)
       setError("Failed to load account data: " + error.message)
@@ -2473,7 +2483,7 @@ function AccountDataPage() {
                         Task Description
                       </th>
                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-                        Task Start Date
+                        End Date
                       </th>
                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Freq
@@ -2626,7 +2636,7 @@ function AccountDataPage() {
                       Task Description
                     </th>
                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-                      Task Start Date
+                      End Date
                     </th>
                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Freq

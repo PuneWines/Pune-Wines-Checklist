@@ -195,55 +195,68 @@ export default function AdminDashboard() {
   }
 
   // Parse various date formats from Google Sheets - OPTIMIZED
-  const parseGoogleSheetsDate = (dateValue) => {
-    if (!dateValue) return ""
-
-    // Fast path for Date objects
-    if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-      return formatDateToDDMMYYYY(dateValue)
-    }
-
-    // Fast path for strings
-    if (typeof dateValue === "string") {
-      // Check DD/MM/YYYY format first (most common)
-      if (dateValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-        const parts = dateValue.split("/")
-        return `${parts[0].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[2]}`
-      }
-
-      // Google Sheets Date format
-      if (dateValue.startsWith("Date(")) {
-        const match = /Date$(\d+),(\d+),(\d+)$/.exec(dateValue)
-        if (match) {
-          const year = Number.parseInt(match[1], 10)
-          const month = Number.parseInt(match[2], 10)
-          const day = Number.parseInt(match[3], 10)
-          return `${day.toString().padStart(2, "0")}/${(month + 1).toString().padStart(2, "0")}/${year}`
-        }
-      }
-
-      // Try standard date parsing
-      try {
-        const date = new Date(dateValue)
-        if (!isNaN(date.getTime())) {
-          return formatDateToDDMMYYYY(date)
-        }
-      } catch (e) {
-        // Silent fail
-      }
-    }
-
-    // Excel serial date
-    if (typeof dateValue === "number") {
-      const excelEpoch = new Date(1900, 0, 1)
-      const date = new Date(excelEpoch.getTime() + (dateValue - 2) * 24 * 60 * 60 * 1000)
-      if (!isNaN(date.getTime())) {
-        return formatDateToDDMMYYYY(date)
-      }
-    }
-
-    return dateValue.toString()
+  // Parse various date formats from Google Sheets - OPTIMIZED - FIXED FOR TIME
+const parseGoogleSheetsDate = (dateValue) => {
+  if (!dateValue) return "";
+  
+  // Fast path for Date objects
+  if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+    return formatDateToDDMMYYYY(dateValue);
   }
+  
+  // Fast path for strings
+  if (typeof dateValue === "string") {
+    // Check DD/MM/YYYY HH:MM:SS format first (with time) - EXTRACT ONLY DATE
+    if (dateValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}\s\d{1,2}:\d{2}:\d{2}$/)) {
+      const parts = dateValue.split(" ");
+      return parts[0]; // Return only the date part DD/MM/YYYY
+    }
+    
+    // Check DD/MM/YYYY HH:MM format (with time) - EXTRACT ONLY DATE
+    if (dateValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}\s\d{1,2}:\d{2}$/)) {
+      const parts = dateValue.split(" ");
+      return parts[0]; // Return only the date part DD/MM/YYYY
+    }
+    
+    // Check DD/MM/YYYY format (most common)
+    if (dateValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+      const parts = dateValue.split("/");
+      return parts[0].padStart(2, "0") + "/" + parts[1].padStart(2, "0") + "/" + parts[2];
+    }
+    
+    // Google Sheets Date() format
+    if (dateValue.startsWith("Date(")) {
+      const match = /Date\((\d+),(\d+),(\d+)\)/.exec(dateValue);
+      if (match) {
+        const year = Number.parseInt(match[1], 10);
+        const month = Number.parseInt(match[2], 10);
+        const day = Number.parseInt(match[3], 10);
+        return day.toString().padStart(2, "0") + "/" + (month + 1).toString().padStart(2, "0") + "/" + year;
+      }
+    }
+    
+    // Try standard date parsing
+    try {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return formatDateToDDMMYYYY(date);
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }
+  
+  // Excel serial date
+  if (typeof dateValue === "number") {
+    const excelEpoch = new Date(1900, 0, 1);
+    const date = new Date(excelEpoch.getTime() + (dateValue - 2) * 24 * 60 * 60 * 1000);
+    if (!isNaN(date.getTime())) {
+      return formatDateToDDMMYYYY(date);
+    }
+  }
+  
+  return dateValue.toString();
+};
 
   // Function to fetch data using Apps Script
   const fetchDataFromAppsScript = async (sheetName) => {
