@@ -35,6 +35,7 @@ const CONFIG = {
   },
 };
 
+
 function AccountDataPage() {
   const [accountData, setAccountData] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -157,54 +158,115 @@ function AccountDataPage() {
   }, []);
 
   const parseGoogleSheetsDate = (dateStr) => {
-    if (!dateStr) return "";
+  if (!dateStr) return "";
 
-    // Handle DD/MM/YYYY format (existing functionality)
-    if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      return dateStr;
-    }
+  // Handle DD/MM/YYYY HH:MM:SS format - show both date and time
+  if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2}$/)) {
+    // Extract date and time parts
+    const [datePart, timePart] = dateStr.split(" ");
+    const [hours, minutes, seconds] = timePart.split(":");
+    return `${datePart} ${hours}:${minutes}`; // Return date with time (HH:MM format)
+  }
 
-    // Handle DD/MM/YYYY HH:MM:SS format (NEW: extract only date part)
-    if (
-      typeof dateStr === "string" &&
-      dateStr.match(/^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}:\d{2}$/)
-    ) {
-      return dateStr.split(" ")[0]; // Extract only the date part before the space
-    }
+  // Handle DD/MM/YYYY HH:MM format
+  if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}$/)) {
+    return dateStr; // Return as is
+  }
 
-    // Handle Google Sheets Date() format (existing functionality)
-    if (typeof dateStr === "string" && dateStr.startsWith("Date(")) {
-      const match = /Date$$(\d+),(\d+),(\d+)$$/.exec(dateStr);
-      if (match) {
-        const year = Number.parseInt(match[1], 10);
-        const month = Number.parseInt(match[2], 10);
-        const day = Number.parseInt(match[3], 10);
-        return `${day.toString().padStart(2, "0")}/${(month + 1)
-          .toString()
-          .padStart(2, "0")}/${year}`;
-      }
-    }
-
-    // Try to parse as regular date (existing functionality)
-    try {
-      const date = new Date(dateStr);
-      if (!isNaN(date.getTime())) {
-        return formatDateToDDMMYYYY(date);
-      }
-    } catch (error) {
-      console.error("Error parsing date:", error);
-    }
-
+  // Handle DD/MM/YYYY format (existing functionality)
+  if (typeof dateStr === "string" && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
     return dateStr;
-  };
+  }
 
-  const parseDateFromDDMMYYYY = (dateStr) => {
-    if (!dateStr || typeof dateStr !== "string") return null;
-    const parts = dateStr.split("/");
-    if (parts.length !== 3) return null;
-    return new Date(parts[2], parts[1] - 1, parts[0]);
-  };
+  // Handle Google Sheets Date() format
+  if (typeof dateStr === "string" && dateStr.startsWith("Date(")) {
+    const match = /Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/.exec(dateStr);
+    if (match) {
+      const year = Number.parseInt(match[1], 10);
+      const month = Number.parseInt(match[2], 10);
+      const day = Number.parseInt(match[3], 10);
+      const hours = Number.parseInt(match[4], 10);
+      const minutes = Number.parseInt(match[5], 10);
+      const seconds = Number.parseInt(match[6], 10);
+      
+      const formattedDate = `${day.toString().padStart(2, "0")}/${(month + 1)
+        .toString()
+        .padStart(2, "0")}/${year}`;
+      
+      // Include time if available
+      if (hours !== undefined && minutes !== undefined) {
+        return `${formattedDate} ${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+      }
+      return formattedDate;
+    }
+  }
 
+  // Try to parse as regular date
+  try {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, "0");
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+      
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+  } catch (error) {
+    console.error("Error parsing date:", error);
+  }
+
+  return dateStr;
+};
+
+
+
+ const parseDateFromDDMMYYYY = (dateStr) => {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  
+  try {
+    // Handle DD/MM/YYYY format
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+      const parts = dateStr.split("/");
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    
+    // Handle DD/MM/YYYY HH:MM format
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}\s\d{1,2}:\d{2}$/)) {
+      const [datePart, timePart] = dateStr.split(" ");
+      const parts = datePart.split("/");
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    
+    // Handle DD/MM/YYYY HH:MM:SS format
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}\s\d{1,2}:\d{2}:\d{2}$/)) {
+      const [datePart, timePart] = dateStr.split(" ");
+      const parts = datePart.split("/");
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    
+    // Try as native Date object
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error parsing date:", error, "Input:", dateStr);
+    return null;
+  }
+};
   const sortDateWise = (a, b) => {
     const dateStrA = a["col6"] || "";
     const dateStrB = b["col6"] || "";
@@ -340,185 +402,202 @@ function AccountDataPage() {
   };
 
   const fetchSheetData = useCallback(async () => {
+  try {
+    setLoading(true);
+    const pendingAccounts = [];
+    const historyRows = [];
+
+    const response = await fetch(
+      `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SHEET_NAME}&action=fetch`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let data;
+
     try {
-      setLoading(true);
-      const pendingAccounts = [];
-      const historyRows = [];
-
-      const response = await fetch(
-        `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SHEET_NAME}&action=fetch`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`);
+      data = JSON.parse(text);
+    } catch (parseError) {
+      const jsonStart = text.indexOf("{");
+      const jsonEnd = text.lastIndexOf("}");
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonString = text.substring(jsonStart, jsonEnd + 1);
+        data = JSON.parse(jsonString);
+      } else {
+        throw new Error("Invalid JSON response from server");
       }
+    }
 
-      const text = await response.text();
-      let data;
+    const currentUsername = sessionStorage.getItem("username");
+    const currentUserRole = sessionStorage.getItem("role");
 
-      try {
-        data = JSON.parse(text);
-      } catch (parseError) {
-        const jsonStart = text.indexOf("{");
-        const jsonEnd = text.lastIndexOf("}");
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-          const jsonString = text.substring(jsonStart, jsonEnd + 1);
-          data = JSON.parse(jsonString);
-        } else {
-          throw new Error("Invalid JSON response from server");
-        }
-      }
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
 
-      const currentUsername = sessionStorage.getItem("username");
-      const currentUserRole = sessionStorage.getItem("role");
+    console.log("Date filtering - Today (end of day):", today);
 
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
+    const membersSet = new Set();
 
-      const todayStr = formatDateToDDMMYYYY(today);
-      const tomorrowStr = formatDateToDDMMYYYY(tomorrow);
+    let rows = [];
+    if (data.table && data.table.rows) {
+      rows = data.table.rows;
+    } else if (Array.isArray(data)) {
+      rows = data;
+    } else if (data.values) {
+      rows = data.values.map((row) => ({
+        c: row.map((val) => ({ v: val })),
+      }));
+    }
 
-      console.log("Filtering dates:", { todayStr, tomorrowStr });
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex === 0) return; // Skip header row
 
-      const membersSet = new Set();
-
-      let rows = [];
-      if (data.table && data.table.rows) {
-        rows = data.table.rows;
-      } else if (Array.isArray(data)) {
-        rows = data;
-      } else if (data.values) {
-        rows = data.values.map((row) => ({
-          c: row.map((val) => ({ v: val })),
-        }));
-      }
-
-      rows.forEach((row, rowIndex) => {
-        if (rowIndex === 0) return;
-
-        let rowValues = [];
-        if (row.c) {
-          rowValues = row.c.map((cell) =>
-            cell && cell.v !== undefined ? cell.v : ""
-          );
-        } else if (Array.isArray(row)) {
-          rowValues = row;
-        } else {
-          console.log("Unknown row format:", row);
-          return;
-        }
-
-        const assignedTo = rowValues[4] || "Unassigned";
-        membersSet.add(assignedTo);
-
-        const isUserMatch =
-          currentUserRole === "admin" ||
-          assignedTo.toLowerCase() === currentUsername.toLowerCase();
-        if (!isUserMatch && currentUserRole !== "admin") return;
-
-        const columnGValue = rowValues[6];
-        const columnKValue = rowValues[10];
-        const columnMValue = rowValues[12];
-
-        if (columnMValue && columnMValue.toString().trim() === "DONE") {
-          return;
-        }
-
-        const rowDateStr = columnGValue ? String(columnGValue).trim() : "";
-        const formattedRowDate = parseGoogleSheetsDate(rowDateStr);
-
-        const googleSheetsRowIndex = rowIndex + 1;
-
-        // Create stable unique ID using task ID and row index
-        const taskId = rowValues[1] || "";
-        const stableId = taskId
-          ? `task_${taskId}_${googleSheetsRowIndex}`
-          : `row_${googleSheetsRowIndex}_${Math.random()
-              .toString(36)
-              .substring(2, 15)}`;
-
-        const rowData = {
-          _id: stableId,
-          _rowIndex: googleSheetsRowIndex,
-          _taskId: taskId,
-        };
-
-        const columnHeaders = [
-          { id: "col0", label: "Timestamp", type: "string" },
-          { id: "col1", label: "Task ID", type: "string" },
-          { id: "col2", label: "Firm", type: "string" },
-          { id: "col3", label: "Given By", type: "string" },
-          { id: "col4", label: "Name", type: "string" },
-          { id: "col5", label: "Task Description", type: "string" },
-          { id: "col6", label: "Task Start Date", type: "date" },
-          { id: "col7", label: "Freq", type: "string" },
-          { id: "col8", label: "Enable Reminders", type: "string" },
-          { id: "col9", label: "Require Attachment", type: "string" },
-          { id: "col10", label: "Actual", type: "date" },
-          { id: "col11", label: "Column L", type: "string" },
-          { id: "col12", label: "Status", type: "string" },
-          { id: "col13", label: "Remarks", type: "string" },
-          { id: "col14", label: "Uploaded Image", type: "string" },
-          { id: "col15", label: "Admin Done", type: "string" }, // NEW: Column P
-        ];
-
-        columnHeaders.forEach((header, index) => {
-          const cellValue = rowValues[index];
-          if (
-            header.type === "date" ||
-            (cellValue && String(cellValue).startsWith("Date("))
-          ) {
-            rowData[header.id] = cellValue
-              ? parseGoogleSheetsDate(String(cellValue))
-              : "";
-          } else if (
-            header.type === "number" &&
-            cellValue !== null &&
-            cellValue !== ""
-          ) {
-            rowData[header.id] = cellValue;
-          } else {
-            rowData[header.id] = cellValue !== null ? cellValue : "";
-          }
-        });
-
-        console.log(
-          `Row ${rowIndex}: Task ID = ${rowData.col1}, Google Sheets Row = ${googleSheetsRowIndex}`
+      let rowValues = [];
+      if (row.c) {
+        rowValues = row.c.map((cell) =>
+          cell && cell.v !== undefined ? cell.v : ""
         );
+      } else if (Array.isArray(row)) {
+        rowValues = row;
+      } else {
+        console.log("Unknown row format:", row);
+        return;
+      }
 
-        const hasColumnG = !isEmpty(columnGValue);
-        const isColumnKEmpty = isEmpty(columnKValue);
+      const assignedTo = rowValues[4] || "Unassigned";
+      membersSet.add(assignedTo);
 
-        if (hasColumnG && isColumnKEmpty) {
-          const rowDate = parseDateFromDDMMYYYY(formattedRowDate);
-          const isToday = formattedRowDate === todayStr;
-          const isTomorrow = formattedRowDate === tomorrowStr;
-          const isPastDate = rowDate && rowDate <= today;
+      const isUserMatch =
+        currentUserRole === "admin" ||
+        assignedTo.toLowerCase() === currentUsername.toLowerCase();
+      if (!isUserMatch && currentUserRole !== "admin") return;
 
-          if (isToday || isTomorrow || isPastDate) {
-            pendingAccounts.push(rowData);
-          }
-        } else if (hasColumnG && !isColumnKEmpty) {
-          const isUserHistoryMatch =
-            currentUserRole === "admin" ||
-            assignedTo.toLowerCase() === currentUsername.toLowerCase();
-          if (isUserHistoryMatch) {
-            historyRows.push(rowData);
-          }
+      const columnGValue = rowValues[6]; // Task Start Date
+      const columnKValue = rowValues[10]; // Actual Date
+      const columnMValue = rowValues[12]; // Status
+
+      // Skip if status is "DONE"
+      if (columnMValue && columnMValue.toString().trim().toUpperCase() === "DONE") {
+        return;
+      }
+
+      const rowDateStr = columnGValue ? String(columnGValue).trim() : "";
+      const formattedRowDate = parseGoogleSheetsDate(rowDateStr);
+
+      const googleSheetsRowIndex = rowIndex + 1;
+
+      // Create stable unique ID
+      const taskId = rowValues[1] || "";
+      const stableId = taskId
+        ? `task_${taskId}_${googleSheetsRowIndex}`
+        : `row_${googleSheetsRowIndex}_${Math.random()
+            .toString(36)
+            .substring(2, 15)}`;
+
+      const rowData = {
+        _id: stableId,
+        _rowIndex: googleSheetsRowIndex,
+        _taskId: taskId,
+      };
+
+      const columnHeaders = [
+        { id: "col0", label: "Timestamp", type: "string" },
+        { id: "col1", label: "Task ID", type: "string" },
+        { id: "col2", label: "Firm", type: "string" },
+        { id: "col3", label: "Given By", type: "string" },
+        { id: "col4", label: "Name", type: "string" },
+        { id: "col5", label: "Task Description", type: "string" },
+        { id: "col6", label: "Task Start Date", type: "date" },
+        { id: "col7", label: "Freq", type: "string" },
+        { id: "col8", label: "Enable Reminders", type: "string" },
+        { id: "col9", label: "Require Attachment", type: "string" },
+        { id: "col10", label: "Actual", type: "date" },
+        { id: "col11", label: "Column L", type: "string" },
+        { id: "col12", label: "Status", type: "string" },
+        { id: "col13", label: "Remarks", type: "string" },
+        { id: "col14", label: "Uploaded Image", type: "string" },
+        { id: "col15", label: "Admin Done", type: "string" },
+      ];
+
+      columnHeaders.forEach((header, index) => {
+        const cellValue = rowValues[index];
+        if (
+          header.type === "date" ||
+          (cellValue && String(cellValue).startsWith("Date("))
+        ) {
+          rowData[header.id] = cellValue
+            ? parseGoogleSheetsDate(String(cellValue))
+            : "";
+        } else if (
+          header.type === "number" &&
+          cellValue !== null &&
+          cellValue !== ""
+        ) {
+          rowData[header.id] = cellValue;
+        } else {
+          rowData[header.id] = cellValue !== null ? cellValue : "";
         }
       });
 
-      setMembersList(Array.from(membersSet).sort());
-      setAccountData(pendingAccounts);
-      setHistoryData(historyRows);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching sheet data:", error);
-      setError("Failed to load account data: " + error.message);
-      setLoading(false);
-    }
-  }, []);
+      console.log(`Row ${rowIndex}: Task ID = ${rowData.col1}, Start Date = ${rowData.col6}, Actual Date = ${rowData.col10}`);
+
+      const hasColumnG = !isEmpty(columnGValue);
+      const isColumnKEmpty = isEmpty(columnKValue);
+
+      // FIXED: Show tasks from past dates up to today (including today), but exclude tomorrow
+      if (hasColumnG && isColumnKEmpty) {
+        const rowDate = parseDateFromDDMMYYYY(formattedRowDate);
+        
+        if (rowDate) {
+          // Normalize dates for comparison
+          const normalizedRowDate = new Date(rowDate);
+          normalizedRowDate.setHours(0, 0, 0, 0);
+          
+          const normalizedToday = new Date(today);
+          normalizedToday.setHours(0, 0, 0, 0);
+
+          // CHANGED: Include past dates AND today, but exclude future dates (tomorrow)
+          const isPastOrToday = normalizedRowDate <= normalizedToday;
+
+          console.log(`Date check - Row: ${formattedRowDate}, Today: ${formatDateToDDMMYYYY(normalizedToday)}, IsPastOrToday: ${isPastOrToday}`);
+
+          if (isPastOrToday) {
+            pendingAccounts.push(rowData);
+            console.log(`✅ ADDED to pending (Past & Today): ${rowData.col5} (Date: ${formattedRowDate})`);
+          } else {
+            console.log(`❌ SKIPPED - Future date (tomorrow): ${rowData.col5} (Date: ${formattedRowDate})`);
+          }
+        } else {
+          console.log(`❌ Could not parse date: ${formattedRowDate}`);
+        }
+      } else if (hasColumnG && !isColumnKEmpty) {
+        const isUserHistoryMatch =
+          currentUserRole === "admin" ||
+          assignedTo.toLowerCase() === currentUsername.toLowerCase();
+        if (isUserHistoryMatch) {
+          historyRows.push(rowData);
+        }
+      } else {
+        console.log(`❌ SKIPPED - Column G empty or Column K filled: ${rowData.col5}`);
+      }
+    });
+
+    console.log(`Final results - Pending (Past & Today): ${pendingAccounts.length}, History: ${historyRows.length}`);
+    
+    setMembersList(Array.from(membersSet).sort());
+    setAccountData(pendingAccounts);
+    setHistoryData(historyRows);
+    setLoading(false);
+  } catch (error) {
+    console.error("Error fetching sheet data:", error);
+    setError("Failed to load account data: " + error.message);
+    setLoading(false);
+  }
+}, []);
+
 
   useEffect(() => {
     fetchSheetData();
