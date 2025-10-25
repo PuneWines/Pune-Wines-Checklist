@@ -54,7 +54,7 @@ function fetchSheetData(sheetName) {
           {label: "Given By", type: "string"},
           {label: "Name", type: "string"},
           {label: "Task Description", type: "string"},
-          {label: "Task Start Date", type: "string"},
+          {label: "Task End Date", type: "string"},
           {label: "Freq", type: "string"},
           {label: "Enable Reminders", type: "string"},
           {label: "Require Attachment", type: "string"},

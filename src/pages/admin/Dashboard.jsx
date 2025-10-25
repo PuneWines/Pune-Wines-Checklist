@@ -1382,7 +1382,7 @@
 //                         scope="col"
 //                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 //                       >
-//                         Task Start Date
+//                         Task End Date
 //                       </th>
 //                       <th
 //                         scope="col"
@@ -3261,7 +3261,7 @@ const StaffTasksTable = () => {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        Task Start Date
+                        Task End Date
                       </th>
                       <th
                         scope="col"

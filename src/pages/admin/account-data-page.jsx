@@ -377,7 +377,7 @@
 //           { id: "col3", label: "Given By", type: "string" },
 //           { id: "col4", label: "Name", type: "string" },
 //           { id: "col5", label: "Task Description", type: "string" },
-//           { id: "col6", label: "Task Start Date", type: "date" },
+//           { id: "col6", label: "Task End Date", type: "date" },
 //           { id: "col7", label: "Freq", type: "string" },
 //           { id: "col8", label: "Enable Reminders", type: "string" },
 //           { id: "col9", label: "Require Attachment", type: "string" },
@@ -889,7 +889,7 @@
 //                         Task Description
 //                       </th>
 //                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-//                         Task Start Date
+//                         Task End Date
 //                       </th>
 //                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                         Freq
@@ -1031,7 +1031,7 @@
 //                       Task Description
 //                     </th>
 //                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-//                       Task Start Date
+//                       Task End Date
 //                     </th>
 //                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
 //                       Freq
@@ -1806,7 +1806,7 @@ const sortDateWise = (a, b) => {
         { id: "col3", label: "Given By", type: "string" },
         { id: "col4", label: "Name", type: "string" },
         { id: "col5", label: "Task Description", type: "string" },
-        { id: "col6", label: "Task Start Date", type: "date" },
+        { id: "col6", label: "Task End Date", type: "date" },
         { id: "col7", label: "Freq", type: "string" },
         { id: "col8", label: "Enable Reminders", type: "string" },
         { id: "col9", label: "Require Attachment", type: "string" },
@@ -2675,7 +2675,7 @@ const sortDateWise = (a, b) => {
                         Task Description
                       </th>
                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-                        Task Start Date
+                        Task End Date
                       </th>
                       <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                         Freq
@@ -2875,7 +2875,7 @@ const sortDateWise = (a, b) => {
                       Task Description
                     </th>
                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-yellow-50">
-                      Task Start Date
+                      Task End Date
                     </th>
                     <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                       Freq

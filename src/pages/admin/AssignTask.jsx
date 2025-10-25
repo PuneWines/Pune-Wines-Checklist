@@ -944,7 +944,7 @@ const handleSubmit = async (e) => {
 <div className="grid gap-4 md:grid-cols-3">
   <div className="space-y-2">
     <label className="block text-sm font-medium text-purple-700">
-      Task Start Date
+      Task End Date
     </label>
     <div className="relative">
       <button
@@ -972,7 +972,7 @@ const handleSubmit = async (e) => {
       htmlFor="time"
       className="block text-sm font-medium text-purple-700"
     >
-      Task Start Time
+      Task End Time
     </label>
     <input
       type="time"
