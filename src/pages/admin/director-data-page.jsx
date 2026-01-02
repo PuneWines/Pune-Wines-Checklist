@@ -64,6 +64,11 @@ function AccountDataPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const [selectedPendingMembers, setSelectedPendingMembers] = useState([]);
+
+  const [pendingStartDate, setPendingStartDate] = useState("");
+  const [pendingEndDate, setPendingEndDate] = useState("");
+
   // Add these new state variables after existing states
   const [selectedDeleteItems, setSelectedDeleteItems] = useState(new Set());
   const [deleteRemarks, setDeleteRemarks] = useState("");
@@ -300,22 +305,90 @@ function AccountDataPage() {
     setSelectedMembers([]);
     setStartDate("");
     setEndDate("");
+    setPendingStartDate(""); // ADD THIS
+    setPendingEndDate("");
+    setSelectedPendingMembers([]);
   };
 
   // Memoized filtered data to prevent unnecessary re-renders
+  // const filteredAccountData = useMemo(() => {
+  //   const filtered = searchTerm
+  //     ? accountData.filter((account) =>
+  //         Object.values(account).some(
+  //           (value) =>
+  //             value &&
+  //             value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+  //         )
+  //       )
+  //     : accountData;
+
+  //   return filtered.sort(sortDateWise);
+  // }, [accountData, searchTerm]);
+
   const filteredAccountData = useMemo(() => {
-    const filtered = searchTerm
-      ? accountData.filter((account) =>
-          Object.values(account).some(
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    const filtered = accountData.filter((account) => {
+      // Search filter
+      const matchesSearch = searchTerm
+        ? Object.values(account).some(
             (value) =>
               value &&
               value.toString().toLowerCase().includes(searchTerm.toLowerCase())
           )
-        )
-      : accountData;
+        : true;
+
+      // Date range filter
+      let matchesDateRange = true;
+      const taskDate = parseDateFromDDMMYYYY(account["col6"]);
+
+      if (pendingStartDate || pendingEndDate) {
+        // If user has selected date filters, use them
+        if (!taskDate) return false;
+
+        if (pendingStartDate) {
+          const startDateObj = new Date(pendingStartDate);
+          startDateObj.setHours(0, 0, 0, 0);
+          if (taskDate < startDateObj) matchesDateRange = false;
+        }
+
+        if (pendingEndDate) {
+          const endDateObj = new Date(pendingEndDate);
+          endDateObj.setHours(23, 59, 59, 999);
+          if (taskDate > endDateObj) matchesDateRange = false;
+        }
+      } else {
+        // If no date filter selected, default to showing only up to today
+        if (taskDate) {
+          const normalizedTaskDate = new Date(taskDate);
+          normalizedTaskDate.setHours(0, 0, 0, 0);
+          const normalizedToday = new Date(today);
+          normalizedToday.setHours(0, 0, 0, 0);
+
+          if (normalizedTaskDate > normalizedToday) {
+            matchesDateRange = false;
+          }
+        }
+      }
+
+      // Member filter (Name column - col4)
+      const matchesMember =
+        selectedPendingMembers.length > 0
+          ? selectedPendingMembers.includes(account["col4"])
+          : true;
+
+      return matchesSearch && matchesDateRange && matchesMember;
+    });
 
     return filtered.sort(sortDateWise);
-  }, [accountData, searchTerm]);
+  }, [
+    accountData,
+    searchTerm,
+    pendingStartDate,
+    pendingEndDate,
+    selectedPendingMembers,
+  ]);
 
   const filteredHistoryData = useMemo(() => {
     return historyData
@@ -652,30 +725,35 @@ function AccountDataPage() {
         const isColumnKEmpty = isEmpty(columnKValue);
 
         // CHANGED: Show only tasks from previous dates up to today (excluding tomorrow)
+        // if (hasColumnG && isColumnKEmpty) {
+        //   const rowDate = parseDateFromDDMMYYYY(formattedRowDate);
+
+        //   if (rowDate) {
+        //     // Compare dates with time included
+        //     const isPastOrToday = rowDate <= today;
+
+        //     console.log(
+        //       `Date check - Row: ${formattedRowDate}, Today: ${today}, IsPastOrToday: ${isPastOrToday}`
+        //     );
+
+        //     if (isPastOrToday) {
+        //       pendingAccounts.push(rowData);
+        //       console.log(
+        //         `✅ ADDED to pending (Past & Today): ${rowData.col5} (Date: ${formattedRowDate})`
+        //       );
+        //     } else {
+        //       console.log(
+        //         `❌ SKIPPED - Future date (tomorrow): ${rowData.col5} (Date: ${formattedRowDate})`
+        //       );
+        //     }
+        //   } else {
+        //     console.log(`❌ Could not parse date: ${formattedRowDate}`);
+        //   }
+        // }
+
+        // Show tasks based on date filters (if no filter, show up to today)
         if (hasColumnG && isColumnKEmpty) {
-          const rowDate = parseDateFromDDMMYYYY(formattedRowDate);
-
-          if (rowDate) {
-            // Compare dates with time included
-            const isPastOrToday = rowDate <= today;
-
-            console.log(
-              `Date check - Row: ${formattedRowDate}, Today: ${today}, IsPastOrToday: ${isPastOrToday}`
-            );
-
-            if (isPastOrToday) {
-              pendingAccounts.push(rowData);
-              console.log(
-                `✅ ADDED to pending (Past & Today): ${rowData.col5} (Date: ${formattedRowDate})`
-              );
-            } else {
-              console.log(
-                `❌ SKIPPED - Future date (tomorrow): ${rowData.col5} (Date: ${formattedRowDate})`
-              );
-            }
-          } else {
-            console.log(`❌ Could not parse date: ${formattedRowDate}`);
-          }
+          pendingAccounts.push(rowData); // Add all tasks, filtering will happen in filteredAccountData
         } else if (hasColumnG && !isColumnKEmpty) {
           const isUserHistoryMatch =
             currentUserRole === "admin" ||
@@ -733,7 +811,6 @@ function AccountDataPage() {
         });
       }
 
-      console.log(`Updated selection: ${Array.from(newSelected)}`);
       return newSelected;
     });
   }, []);
@@ -1263,15 +1340,19 @@ function AccountDataPage() {
                 )}
 
                 {/* Delete Button */}
-                <button
-                  onClick={handlePendingDelete}
-                  disabled={selectedDeleteItems.size === 0 || isDeletingPending}
-                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeletingPending
-                    ? "Deleting..."
-                    : `Delete (${selectedDeleteItems.size})`}
-                </button>
+                {userRole === "admin" && (
+                  <button
+                    onClick={handlePendingDelete}
+                    disabled={
+                      selectedDeleteItems.size === 0 || isDeletingPending
+                    }
+                    className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDeletingPending
+                      ? "Deleting..."
+                      : `Delete (${selectedDeleteItems.size})`}
+                  </button>
+                )}
                 <button
                   onClick={handleSubmit}
                   disabled={selectedItemsCount === 0 || isSubmitting}
@@ -1331,6 +1412,102 @@ function AccountDataPage() {
                 : CONFIG.PAGE_CONFIG.description}
             </p>
           </div>
+
+          {/* Date Range Filter for Pending Tasks - Only show when NOT in history view */}
+          {!showHistory && (
+            <div className="p-4 bg-gray-50 border-b border-purple-100">
+              <div className="flex flex-wrap gap-4 justify-between items-center">
+                <div className="flex flex-col">
+                  <div className="flex items-center mb-2">
+                    <span className="text-sm font-medium text-purple-700">
+                      Filter by Task End Date:
+                    </span>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex items-center">
+                      <label
+                        htmlFor="pending-start-date"
+                        className="mr-1 text-sm text-gray-700"
+                      >
+                        From
+                      </label>
+                      <input
+                        id="pending-start-date"
+                        type="date"
+                        value={pendingStartDate}
+                        onChange={(e) => setPendingStartDate(e.target.value)}
+                        className="p-1 text-sm rounded-md border border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <label
+                        htmlFor="pending-end-date"
+                        className="mr-1 text-sm text-gray-700"
+                      >
+                        To
+                      </label>
+                      <input
+                        id="pending-end-date"
+                        type="date"
+                        value={pendingEndDate}
+                        onChange={(e) => setPendingEndDate(e.target.value)}
+                        className="p-1 text-sm rounded-md border border-gray-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {getFilteredMembersList().length > 0 && (
+                  <div className="flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <span className="text-sm font-medium text-purple-700">
+                        Filter by Name:
+                      </span>
+                    </div>
+                    <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
+                      {getFilteredMembersList().map((member, idx) => (
+                        <div key={idx} className="flex items-center">
+                          <input
+                            id={`pending-member-${idx}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                            checked={selectedPendingMembers.includes(member)}
+                            onChange={() => {
+                              setSelectedPendingMembers((prev) => {
+                                if (prev.includes(member)) {
+                                  return prev.filter((item) => item !== member);
+                                } else {
+                                  return [...prev, member];
+                                }
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor={`pending-member-${idx}`}
+                            className="ml-2 text-sm text-gray-700"
+                          >
+                            {member}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(pendingStartDate ||
+                  pendingEndDate ||
+                  searchTerm ||
+                  selectedPendingMembers.length > 0) && (
+                  <button
+                    onClick={resetFilters}
+                    className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-10">
@@ -1698,29 +1875,32 @@ function AccountDataPage() {
                         onChange={handleSelectAllItems}
                       />
                     </th>
-                    <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-red-50">
-                      Delete
-                      <input
-                        type="checkbox"
-                        className="block mt-1 w-4 h-4 text-red-600 rounded border-gray-300"
-                        checked={
-                          selectedDeleteItems.size ===
-                            filteredAccountData.length &&
-                          filteredAccountData.length > 0
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedDeleteItems(
-                              new Set(
-                                filteredAccountData.map((item) => item._id)
-                              )
-                            );
-                          } else {
-                            setSelectedDeleteItems(new Set());
+                    {userRole === "admin" && (
+                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase bg-red-50">
+                        Delete
+                        <input
+                          type="checkbox"
+                          className="block mt-1 w-4 h-4 text-red-600 rounded border-gray-300"
+                          checked={
+                            selectedDeleteItems.size ===
+                              filteredAccountData.length &&
+                            filteredAccountData.length > 0
                           }
-                        }}
-                      />
-                    </th>
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDeleteItems(
+                                new Set(
+                                  filteredAccountData.map((item) => item._id)
+                                )
+                              );
+                            } else {
+                              setSelectedDeleteItems(new Set());
+                            }
+                          }}
+                        />
+                      </th>
+                    )}
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Task ID
                     </th>
@@ -1780,22 +1960,24 @@ function AccountDataPage() {
                               }
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap bg-red-50">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 text-red-600 rounded border-gray-300"
-                              checked={selectedDeleteItems.has(account._id)}
-                              onChange={(e) => {
-                                const newSet = new Set(selectedDeleteItems);
-                                if (e.target.checked) {
-                                  newSet.add(account._id);
-                                } else {
-                                  newSet.delete(account._id);
-                                }
-                                setSelectedDeleteItems(newSet);
-                              }}
-                            />
-                          </td>
+                          {userRole === "admin" && (
+                            <td className="px-6 py-4 whitespace-nowrap bg-red-50">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 text-red-600 rounded border-gray-300"
+                                checked={selectedDeleteItems.has(account._id)}
+                                onChange={(e) => {
+                                  const newSet = new Set(selectedDeleteItems);
+                                  if (e.target.checked) {
+                                    newSet.add(account._id);
+                                  } else {
+                                    newSet.delete(account._id);
+                                  }
+                                  setSelectedDeleteItems(newSet);
+                                }}
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
                               {account["col1"] || "—"}
