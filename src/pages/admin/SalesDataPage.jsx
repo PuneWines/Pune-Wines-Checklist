@@ -1585,7 +1585,7 @@ function AccountDataPage() {
             </p>
           </div>
 
-          {!showHistory && (
+          {!showHistory && userRole === "admin" && (
             <div className="p-4 bg-gray-50 border-b border-purple-100">
               <div className="flex flex-wrap gap-4 justify-between items-center">
                 <div className="flex flex-col">

@@ -374,16 +374,22 @@ function AccountDataPage() {
       }
 
       // Member filter (Name column - col4)
-const matchesMember =
-  selectedPendingMembers.length > 0
-    ? selectedPendingMembers.includes(account["col4"])
-    : true;
+      const matchesMember =
+        selectedPendingMembers.length > 0
+          ? selectedPendingMembers.includes(account["col4"])
+          : true;
 
-return matchesSearch && matchesDateRange && matchesMember;
+      return matchesSearch && matchesDateRange && matchesMember;
     });
 
     return filtered.sort(sortDateWise);
-  }, [accountData, searchTerm, pendingStartDate, pendingEndDate, selectedPendingMembers]);
+  }, [
+    accountData,
+    searchTerm,
+    pendingStartDate,
+    pendingEndDate,
+    selectedPendingMembers,
+  ]);
 
   const filteredHistoryData = useMemo(() => {
     return historyData
@@ -1410,7 +1416,7 @@ return matchesSearch && matchesDateRange && matchesMember;
           </div>
 
           {/* Date Range Filter for Pending Tasks - Only show when NOT in history view */}
-          {!showHistory && (
+          {!showHistory && userRole === "admin" && (
             <div className="p-4 bg-gray-50 border-b border-purple-100">
               <div className="flex flex-wrap gap-4 justify-between items-center">
                 <div className="flex flex-col">
@@ -1453,45 +1459,47 @@ return matchesSearch && matchesDateRange && matchesMember;
                   </div>
                 </div>
 
-
                 {getFilteredMembersList().length > 0 && (
-  <div className="flex flex-col">
-    <div className="flex items-center mb-2">
-      <span className="text-sm font-medium text-purple-700">
-        Filter by Name:
-      </span>
-    </div>
-    <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
-      {getFilteredMembersList().map((member, idx) => (
-        <div key={idx} className="flex items-center">
-          <input
-            id={`pending-member-${idx}`}
-            type="checkbox"
-            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-            checked={selectedPendingMembers.includes(member)}
-            onChange={() => {
-              setSelectedPendingMembers((prev) => {
-                if (prev.includes(member)) {
-                  return prev.filter((item) => item !== member);
-                } else {
-                  return [...prev, member];
-                }
-              });
-            }}
-          />
-          <label
-            htmlFor={`pending-member-${idx}`}
-            className="ml-2 text-sm text-gray-700"
-          >
-            {member}
-          </label>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                  <div className="flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <span className="text-sm font-medium text-purple-700">
+                        Filter by Name:
+                      </span>
+                    </div>
+                    <div className="flex overflow-y-auto flex-wrap gap-3 p-2 max-h-32 bg-white rounded-md border border-gray-200">
+                      {getFilteredMembersList().map((member, idx) => (
+                        <div key={idx} className="flex items-center">
+                          <input
+                            id={`pending-member-${idx}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                            checked={selectedPendingMembers.includes(member)}
+                            onChange={() => {
+                              setSelectedPendingMembers((prev) => {
+                                if (prev.includes(member)) {
+                                  return prev.filter((item) => item !== member);
+                                } else {
+                                  return [...prev, member];
+                                }
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor={`pending-member-${idx}`}
+                            className="ml-2 text-sm text-gray-700"
+                          >
+                            {member}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {(pendingStartDate || pendingEndDate || searchTerm || selectedPendingMembers.length > 0) && (
+                {(pendingStartDate ||
+                  pendingEndDate ||
+                  searchTerm ||
+                  selectedPendingMembers.length > 0) && (
                   <button
                     onClick={resetFilters}
                     className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
