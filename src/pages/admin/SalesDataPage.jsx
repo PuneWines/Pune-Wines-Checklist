@@ -1,7 +1,7 @@
 //Checklist Tasks Page
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import {
   CheckCircle2,
   Upload,
@@ -34,6 +34,311 @@ const CONFIG = {
   },
 };
 
+// Optimization: Memoized History Row Component
+const HistoryRow = memo(({ history, isSelected, onSelect }) => {
+  return (
+    <tr
+      className={`${
+        isSelected ? "bg-green-50" : ""
+      } hover:bg-gray-50`}
+    >
+      <td className="px-6 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+          checked={isSelected}
+          onChange={(e) => onSelect(e, history._id)}
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">
+          {history["col1"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col2"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col3"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col4"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <div
+          className="max-w-xs text-sm text-gray-900"
+          title={history["col5"]}
+        >
+          {history["col5"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+        <div className="text-sm text-gray-900">
+          {history["col6"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col7"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col8"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {history["col9"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-green-50">
+        <div className="text-sm font-medium text-gray-900">
+          {history["col10"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-blue-50">
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            history["col12"] === "Yes"
+              ? "bg-green-100 text-green-800"
+              : history["col12"] === "No"
+              ? "bg-red-100 text-red-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {history["col12"] || "—"}
+        </span>
+      </td>
+      <td className="px-6 py-4 bg-purple-50">
+        <div
+          className="max-w-xs text-sm text-gray-900"
+          title={history["col13"]}
+        >
+          {history["col13"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {history["col14"] ? (
+          <a
+            href={history["col14"]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center text-blue-600 underline hover:text-blue-800"
+          >
+            <img
+              src={
+                history["col14"] ||
+                "/placeholder.svg?height=32&width=32"
+              }
+              alt="Attachment"
+              className="object-cover mr-2 w-8 h-8 rounded-md"
+            />
+            View
+          </a>
+        ) : (
+          <span className="text-gray-400">
+            No attachment
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+});
+
+// Optimization: Memoized Task Row Component
+const TaskRow = memo(({
+  account,
+  isSelected,
+  isDeleteSelected,
+  userRole,
+  additionalDataValue,
+  remarksDataValue,
+  onSelect,
+  onDeleteSelect,
+  onAdditionalDataChange,
+  onRemarksDataChange,
+  onImageUpload,
+  onStartCamera
+}) => {
+  return (
+    <tr
+      className={`${
+        isSelected ? "bg-purple-50" : ""
+      } hover:bg-gray-50`}
+    >
+      <td className="px-6 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+          checked={isSelected}
+          onChange={(e) => onSelect(e, account._id)}
+        />
+      </td>
+      {userRole === "admin" && (
+        <td className="px-6 py-4 whitespace-nowrap bg-red-50">
+          <input
+            type="checkbox"
+            className="w-4 h-4 text-red-600 rounded border-gray-300"
+            checked={isDeleteSelected}
+            onChange={(e) => onDeleteSelect(e, account._id)}
+          />
+        </td>
+      )}
+
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col1"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col2"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col3"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col4"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <div className="max-w-xs text-sm text-gray-900 whitespace-normal break-words">
+          {account["col5"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+        <div className="text-sm text-gray-900">
+          {account["col6"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col7"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col8"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {account["col9"] || "—"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
+        <select
+          disabled={!isSelected}
+          value={additionalDataValue || ""}
+          onChange={(e) => onAdditionalDataChange(account._id, e.target.value)}
+          className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        >
+          <option value="">Select...</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-orange-50">
+        <input
+          type="text"
+          placeholder="Enter remarks"
+          disabled={!isSelected || !additionalDataValue}
+          value={remarksDataValue || ""}
+          onChange={(e) => onRemarksDataChange(account._id, e.target.value)}
+          className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap bg-green-50">
+        {account.image ? (
+          <div className="flex items-center">
+            <img
+              src={
+                typeof account.image === "string"
+                  ? account.image
+                  : URL.createObjectURL(account.image)
+              }
+              alt="Receipt"
+              className="object-cover mr-2 w-10 h-10 rounded-md"
+            />
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-500">
+                {account.image instanceof File
+                  ? account.image.name
+                  : "Uploaded Receipt"}
+              </span>
+              {account.image instanceof File ? (
+                <span className="text-xs text-green-600">
+                  Ready to upload
+                </span>
+              ) : (
+                <button
+                  className="text-xs text-purple-600 hover:text-purple-800"
+                  onClick={() => window.open(account.image, "_blank")}
+                >
+                  View Full Image
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-2">
+            <button
+              type="button"
+              onClick={() => onStartCamera(account._id)}
+              disabled={!isSelected}
+              className={`flex items-center justify-center p-1 rounded-md ${
+                account["col9"]?.toUpperCase() === "YES"
+                  ? "bg-red-100 text-red-600"
+                  : "bg-purple-100 text-purple-600"
+              } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <Search className="mr-1 w-5 h-5" />
+              <span className="text-xs">Take Photo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = (e) => onImageUpload(account._id, e);
+                input.click();
+              }}
+              disabled={!isSelected}
+              className={`flex items-center justify-center p-1 rounded-md ${
+                account["col9"]?.toUpperCase() === "YES"
+                  ? "bg-red-100 text-red-600"
+                  : "bg-blue-100 text-blue-600"
+              } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <Upload className="mr-1 w-5 h-5" />
+              <span className="text-xs">Upload Image</span>
+            </button>
+
+            {account["col9"]?.toUpperCase() === "YES" && (
+              <span className="text-xs text-red-500">
+                * Required
+              </span>
+            )}
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+});
+
 function AccountDataPage() {
   const [accountData, setAccountData] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -54,9 +359,11 @@ function AccountDataPage() {
   const [username, setUsername] = useState("");
 
   // NEW: History-specific state
+  // NEW: History-specific state
   const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set());
   const [isSubmittingHistory, setIsSubmittingHistory] = useState(false);
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
+  const [isSwitchingView, setIsSwitchingView] = useState(false);
 
   // Add this state at the top of your component
   const [cameraStream, setCameraStream] = useState(null);
@@ -75,7 +382,51 @@ function AccountDataPage() {
   const [isDeletingPending, setIsDeletingPending] = useState(false);
 
   // Add these functions to your component
-  const startCamera = async (accountId) => {
+  const handleImageUpload = useCallback(async (id, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setAccountData((prev) =>
+      prev.map((item) => (item._id === id ? { ...item, image: file } : item))
+    );
+  }, []);
+
+  // Optimization: Memoized handlers for data changes
+  const handleAdditionalDataChange = useCallback((id, value) => {
+    setAdditionalData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+    if (value !== "No") {
+      setRemarksData((prev) => {
+        const newData = { ...prev };
+        delete newData[id];
+        return newData;
+      });
+    }
+  }, []);
+
+  const handleRemarksDataChange = useCallback((id, value) => {
+    setRemarksData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  }, []);
+
+  const handleDeleteCheckboxChange = useCallback((e, id) => {
+    const isChecked = e.target.checked;
+    setSelectedDeleteItems((prev) => {
+      const newSet = new Set(prev);
+      if (isChecked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const startCamera = useCallback(async (accountId) => {
     try {
       setCurrentCameraAccountId(accountId);
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -107,18 +458,18 @@ function AccountDataPage() {
       input.onchange = (e) => handleImageUpload(accountId, e);
       input.click();
     }
-  };
+  }, [handleImageUpload]);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
       setCameraStream(null);
     }
     setCameraModalOpen(false);
-  };
+  }, [cameraStream]);
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
+  const capturePhoto = useCallback(() => {
+    if (videoRef.current && canvasRef.current && currentCameraAccountId) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth;
@@ -140,7 +491,7 @@ function AccountDataPage() {
         0.9
       );
     }
-  };
+  }, [currentCameraAccountId, handleImageUpload, stopCamera]);
 
   const formatDateToDDMMYYYY = (date) => {
     const day = date.getDate().toString().padStart(2, "0");
@@ -605,6 +956,7 @@ function AccountDataPage() {
           { id: "col12", label: "Status", type: "string" },
           { id: "col13", label: "Remarks", type: "string" },
           { id: "col14", label: "Uploaded Image", type: "string" },
+          { id: "col15", label: "Admin Done", type: "string" },
         ];
 
         columnHeaders.forEach((header, index) => {
@@ -654,6 +1006,11 @@ function AccountDataPage() {
         // CHANGED: Show only tasks from previous dates up to today (excluding tomorrow)
         if (hasColumnG && isColumnKEmpty) {
           pendingAccounts.push(rowData);
+        }
+
+        // Add to history if Actual (Column K) is filled
+        if (!isColumnKEmpty) {
+          historyRows.push(rowData);
         }
       });
 
@@ -763,14 +1120,7 @@ function AccountDataPage() {
     [filteredHistoryData]
   );
 
-  const handleImageUpload = async (id, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    setAccountData((prev) =>
-      prev.map((item) => (item._id === id ? { ...item, image: file } : item))
-    );
-  };
 
   // NEW: Clear Actual (Column K) for selected history items
   const handleHistoryDelete = async () => {
@@ -1186,13 +1536,17 @@ function AccountDataPage() {
   };
 
   const toggleHistory = () => {
-    setShowHistory((prev) => !prev);
-    resetFilters();
-    // Clear selections when switching views
-    setSelectedItems(new Set());
-    setSelectedHistoryItems(new Set());
-    setAdditionalData({});
-    setRemarksData({});
+    setIsSwitchingView(true);
+    setTimeout(() => {
+      setShowHistory((prev) => !prev);
+      resetFilters();
+      // Clear selections when switching views
+      setSelectedItems(new Set());
+      setSelectedHistoryItems(new Set());
+      setAdditionalData({});
+      setRemarksData({});
+      setIsSwitchingView(false);
+    }, 500); // 500ms delay for loading effect
   };
 
   // NEW: History submit function
@@ -1468,9 +1822,15 @@ function AccountDataPage() {
 
             <button
               onClick={toggleHistory}
-              className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              disabled={isSwitchingView}
+              className="px-4 py-2 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-75"
             >
-              {showHistory ? (
+              {isSwitchingView ? (
+                <div className="flex items-center">
+                  <div className="mr-2 w-4 h-4 rounded-full border-2 border-white animate-spin border-t-transparent"></div>
+                  <span>Loading...</span>
+                </div>
+              ) : showHistory ? (
                 <div className="flex items-center">
                   <ArrowLeft className="mr-1 w-4 h-4" />
                   <span>Back to Tasks</span>
@@ -1888,128 +2248,14 @@ function AccountDataPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredHistoryData.length > 0 ? (
-                      filteredHistoryData.map((history) => {
-                        const isHistorySelected = selectedHistoryItems.has(
-                          history._id
-                        );
-                        return (
-                          <tr
-                            key={history._id}
-                            className={`${
-                              isHistorySelected ? "bg-green-50" : ""
-                            } hover:bg-gray-50`}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="checkbox"
-                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                                checked={isHistorySelected}
-                                onChange={(e) =>
-                                  handleHistoryCheckboxClick(e, history._id)
-                                }
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {history["col1"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col2"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col3"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col4"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div
-                                className="max-w-xs text-sm text-gray-900"
-                                title={history["col5"]}
-                              >
-                                {history["col5"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
-                              <div className="text-sm text-gray-900">
-                                {history["col6"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col7"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col8"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {history["col9"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap bg-green-50">
-                              <div className="text-sm font-medium text-gray-900">
-                                {history["col10"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap bg-blue-50">
-                              <span
-                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  history["col12"] === "Yes"
-                                    ? "bg-green-100 text-green-800"
-                                    : history["col12"] === "No"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {history["col12"] || "—"}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 bg-purple-50">
-                              <div
-                                className="max-w-xs text-sm text-gray-900"
-                                title={history["col13"]}
-                              >
-                                {history["col13"] || "—"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {history["col14"] ? (
-                                <a
-                                  href={history["col14"]}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center text-blue-600 underline hover:text-blue-800"
-                                >
-                                  <img
-                                    src={
-                                      history["col14"] ||
-                                      "/placeholder.svg?height=32&width=32"
-                                    }
-                                    alt="Attachment"
-                                    className="object-cover mr-2 w-8 h-8 rounded-md"
-                                  />
-                                  View
-                                </a>
-                              ) : (
-                                <span className="text-gray-400">
-                                  No attachment
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
+                      filteredHistoryData.map((history) => (
+                        <HistoryRow
+                          key={history._id}
+                          history={history}
+                          isSelected={selectedHistoryItems.has(history._id)}
+                          onSelect={handleHistoryCheckboxClick}
+                        />
+                      ))
                     ) : (
                       <tr>
                         <td
@@ -2112,294 +2358,23 @@ function AccountDataPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredAccountData.length > 0 ? (
-                    filteredAccountData.map((account) => {
-                      const isSelected = selectedItems.has(account._id);
-                      return (
-                        <tr
-                          key={account._id}
-                          className={`${
-                            isSelected ? "bg-purple-50" : ""
-                          } hover:bg-gray-50`}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                              checked={isSelected}
-                              onChange={(e) =>
-                                handleCheckboxClick(e, account._id)
-                              }
-                            />
-                          </td>
-                          {userRole === "admin" && (
-                            <td className="px-6 py-4 whitespace-nowrap bg-red-50">
-                              <input
-                                type="checkbox"
-                                className="w-4 h-4 text-red-600 rounded border-gray-300"
-                                checked={selectedDeleteItems.has(account._id)}
-                                onChange={(e) => {
-                                  const newSet = new Set(selectedDeleteItems);
-                                  if (e.target.checked) {
-                                    newSet.add(account._id);
-                                  } else {
-                                    newSet.delete(account._id);
-                                  }
-                                  setSelectedDeleteItems(newSet);
-                                }}
-                              />
-                            </td>
-                          )}
-
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col1"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col2"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col3"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col4"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="max-w-xs text-sm text-gray-900 whitespace-normal break-words">
-                              {account["col5"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
-                            <div className="text-sm text-gray-900">
-                              {account["col6"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col7"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col8"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {account["col9"] || "—"}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap bg-yellow-50">
-                            <select
-                              disabled={!isSelected}
-                              value={additionalData[account._id] || ""}
-                              onChange={(e) => {
-                                setAdditionalData((prev) => ({
-                                  ...prev,
-                                  [account._id]: e.target.value,
-                                }));
-                                if (e.target.value !== "No") {
-                                  setRemarksData((prev) => {
-                                    const newData = { ...prev };
-                                    delete newData[account._id];
-                                    return newData;
-                                  });
-                                }
-                              }}
-                              className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                              <option value="">Select...</option>
-                              <option value="Yes">Yes</option>
-                              <option value="No">No</option>
-                            </select>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap bg-orange-50">
-                            <input
-                              type="text"
-                              placeholder="Enter remarks"
-                              disabled={
-                                !isSelected || !additionalData[account._id]
-                              }
-                              value={remarksData[account._id] || ""}
-                              onChange={(e) =>
-                                setRemarksData((prev) => ({
-                                  ...prev,
-                                  [account._id]: e.target.value,
-                                }))
-                              }
-                              className="px-2 py-1 w-full rounded-md border border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap bg-green-50">
-                            {account.image ? (
-                              <div className="flex items-center">
-                                <img
-                                  src={
-                                    typeof account.image === "string"
-                                      ? account.image
-                                      : URL.createObjectURL(account.image)
-                                  }
-                                  alt="Receipt"
-                                  className="object-cover mr-2 w-10 h-10 rounded-md"
-                                />
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-500">
-                                    {account.image instanceof File
-                                      ? account.image.name
-                                      : "Uploaded Receipt"}
-                                  </span>
-                                  {account.image instanceof File ? (
-                                    <span className="text-xs text-green-600">
-                                      Ready to upload
-                                    </span>
-                                  ) : (
-                                    <button
-                                      className="text-xs text-purple-600 hover:text-purple-800"
-                                      onClick={() =>
-                                        window.open(account.image, "_blank")
-                                      }
-                                    >
-                                      View Full Image
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col space-y-2">
-                                {/* Camera Capture Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => startCamera(account._id)}
-                                  disabled={!isSelected}
-                                  className={`flex items-center justify-center p-1 rounded-md ${
-                                    account["col9"]?.toUpperCase() === "YES"
-                                      ? "bg-red-100 text-red-600"
-                                      : "bg-purple-100 text-purple-600"
-                                  } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="mr-1 w-5 h-5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                  </svg>
-                                  <span className="text-xs">Take Photo</span>
-                                </button>
-
-                                {/* Upload File Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const input =
-                                      document.createElement("input");
-                                    input.type = "file";
-                                    input.accept = "image/*";
-                                    input.onchange = (e) =>
-                                      handleImageUpload(account._id, e);
-                                    input.click();
-                                  }}
-                                  disabled={!isSelected}
-                                  className={`flex items-center justify-center p-1 rounded-md ${
-                                    account["col9"]?.toUpperCase() === "YES"
-                                      ? "bg-red-100 text-red-600"
-                                      : "bg-blue-100 text-blue-600"
-                                  } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                  <Upload className="mr-1 w-5 h-5" />
-                                  <span className="text-xs">Upload Image</span>
-                                </button>
-
-                                {/* Camera Modal */}
-                                {cameraModalOpen && (
-                                  <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-                                    {/* Backdrop */}
-                                    <div
-                                      className="absolute inset-0 bg-black bg-opacity-75"
-                                      onClick={stopCamera}
-                                    ></div>
-
-                                    {/* Modal Content */}
-                                    <div className="relative z-[10000] bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-2xl">
-                                      {/* Close Button */}
-                                      <button
-                                        onClick={stopCamera}
-                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
-                                      >
-                                        <X className="w-5 h-5" />
-                                      </button>
-
-                                      {/* Video Container */}
-                                      <div className="overflow-hidden relative mb-4 bg-black rounded-md aspect-video">
-                                        <video
-                                          ref={videoRef}
-                                          autoPlay
-                                          playsInline
-                                          muted
-                                          className="object-cover w-full h-full"
-                                        />
-                                        <canvas
-                                          ref={canvasRef}
-                                          className="hidden"
-                                        />
-                                      </div>
-
-                                      {/* Capture Button Container - Fixed positioning */}
-                                      <div className="flex justify-center w-full">
-                                        <button
-                                          onClick={capturePhoto}
-                                          className="bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 flex items-center shadow-lg transform hover:scale-105 transition-all duration-200 z-[10001] relative"
-                                          style={{ zIndex: 10001 }}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="mr-2 w-6 h-6"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                          >
-                                            <path
-                                              fillRule="evenodd"
-                                              d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
-                                              clipRule="evenodd"
-                                            />
-                                          </svg>
-                                          Capture Photo
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {account["col9"]?.toUpperCase() === "YES" && (
-                                  <span className="text-xs text-red-500">
-                                    * Required
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
+                    filteredAccountData.map((account) => (
+                      <TaskRow
+                        key={account._id}
+                        account={account}
+                        isSelected={selectedItems.has(account._id)}
+                        isDeleteSelected={selectedDeleteItems.has(account._id)}
+                        userRole={userRole}
+                        additionalDataValue={additionalData[account._id]}
+                        remarksDataValue={remarksData[account._id]}
+                        onSelect={handleCheckboxClick}
+                        onDeleteSelect={handleDeleteCheckboxChange}
+                        onAdditionalDataChange={handleAdditionalDataChange}
+                        onRemarksDataChange={handleRemarksDataChange}
+                        onImageUpload={handleImageUpload}
+                        onStartCamera={startCamera}
+                      />
+                    ))
                   ) : (
                     <tr>
                       <td
@@ -2418,6 +2393,62 @@ function AccountDataPage() {
           )}
         </div>
       </div>
+      {/* Optimized Camera Modal Placement - Outside the list loop */}
+      {cameraModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-75"
+            onClick={stopCamera}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="relative z-[10000] bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={stopCamera}
+              className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 z-[10001] shadow-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Video Container */}
+            <div className="relative mb-4 overflow-hidden bg-black rounded-md aspect-video">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="object-cover w-full h-full"
+              />
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+
+            {/* Capture Button Container */}
+            <div className="flex justify-center w-full">
+              <button
+                onClick={capturePhoto}
+                className="flex relative items-center px-8 py-3 text-white bg-green-500 rounded-lg shadow-lg transition-all duration-200 transform z-[10001] hover:bg-green-600 hover:scale-105"
+                style={{ zIndex: 10001 }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-2 w-6 h-6"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Capture Photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
