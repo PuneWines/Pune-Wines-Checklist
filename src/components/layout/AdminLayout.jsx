@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { CheckSquare, ClipboardList, Home, LogOut, Menu, Database, ChevronDown, ChevronRight, KeyRound,Video } from 'lucide-react'
+import { CheckSquare, ClipboardList, Home, LogOut, Menu, Database, ChevronDown, ChevronRight, KeyRound, Video } from 'lucide-react'
 
 export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   const location = useLocation()
@@ -13,7 +13,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   const [isDataSubmenuOpen, setIsDataSubmenuOpen] = useState(false)
   const [username, setUsername] = useState("")
   const [userRole, setUserRole] = useState("")
-  
+
   // ADD: State for dynamic data categories
   const [dataCategories, setDataCategories] = useState([])
   const [isFetchingCategories, setIsFetchingCategories] = useState(false)
@@ -61,20 +61,20 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
           userName: row?.c?.[2]?.v,
           userRole: row?.c?.[4]?.v,
           accessDepartments: row?.c?.[9]?.v
-        })).filter(item => 
-          item.userName !== null && 
-          item.userName !== undefined && 
+        })).filter(item =>
+          item.userName !== null &&
+          item.userName !== undefined &&
           item.userName !== ""
         )
 
         let accessibleDepartments = []
 
         if (isAdmin) {
-          const adminRow = masterData.find(item => 
-            item.userRole?.toLowerCase() === "admin" && 
+          const adminRow = masterData.find(item =>
+            item.userRole?.toLowerCase() === "admin" &&
             item.userName?.toLowerCase() === username.toLowerCase()
           )
-          
+
           if (adminRow && adminRow.accessDepartments) {
             accessibleDepartments = adminRow.accessDepartments
               .split(',')
@@ -82,11 +82,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
               .filter(dept => dept !== "")
           }
         } else {
-          const userRow = masterData.find(item => 
-            item.userRole?.toLowerCase() === userRole.toLowerCase() && 
+          const userRow = masterData.find(item =>
+            item.userRole?.toLowerCase() === userRole.toLowerCase() &&
             item.userName?.toLowerCase() === username.toLowerCase()
           )
-          
+
           if (userRow && userRow.accessDepartments) {
             accessibleDepartments = userRow.accessDepartments
               .split(',')
@@ -129,11 +129,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
       let accessibleDepartments = []
 
       if (isAdmin) {
-        const adminRow = fallbackMasterData.find(item => 
-          item.userRole?.toLowerCase() === "admin" && 
+        const adminRow = fallbackMasterData.find(item =>
+          item.userRole?.toLowerCase() === "admin" &&
           item.userName?.toLowerCase() === username.toLowerCase()
         )
-        
+
         if (adminRow && adminRow.accessDepartments) {
           accessibleDepartments = adminRow.accessDepartments
             .split(',')
@@ -141,11 +141,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
             .filter(dept => dept !== "")
         }
       } else {
-        const userRow = fallbackMasterData.find(item => 
-          item.userRole?.toLowerCase() === userRole.toLowerCase() && 
+        const userRow = fallbackMasterData.find(item =>
+          item.userRole?.toLowerCase() === userRole.toLowerCase() &&
           item.userName?.toLowerCase() === username.toLowerCase()
         )
-        
+
         if (userRow && userRow.accessDepartments) {
           accessibleDepartments = userRow.accessDepartments
             .split(',')
@@ -176,13 +176,13 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   useEffect(() => {
     const storedUsername = sessionStorage.getItem('username')
     const storedRole = sessionStorage.getItem('role')
-    
+
     if (!storedUsername) {
       // Redirect to login if not authenticated
       navigate("/login")
       return
     }
-  
+
     setUsername(storedUsername)
     setUserRole(storedRole || "user")
 
@@ -216,11 +216,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
     },
     {
       href: "/dashboard/delegation",
-     label: "Delegation",
-     icon: ClipboardList,
-     active: location.pathname === "/dashboard/delegation",
-     showFor: ["admin", "user"] // Only show for admin
-   },
+      label: "Delegation",
+      icon: ClipboardList,
+      active: location.pathname === "/dashboard/delegation",
+      showFor: ["admin", "user"] // Only show for admin
+    },
     {
       href: "#",
       label: "Data",
@@ -246,25 +246,25 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
     },
   ]
 
-// UPDATED: Use dynamic dataCategories instead of static array
-const getAccessibleDepartments = () => {
-  const userRole = sessionStorage.getItem('role') || 'user'
-  return dataCategories.filter(cat => 
-    !cat.showFor || cat.showFor.includes(userRole)
-  )
-}
+  // UPDATED: Use dynamic dataCategories instead of static array
+  const getAccessibleDepartments = () => {
+    const userRole = sessionStorage.getItem('role') || 'user'
+    return dataCategories.filter(cat =>
+      !cat.showFor || cat.showFor.includes(userRole)
+    )
+  }
 
-// Filter routes based on user role
-const getAccessibleRoutes = () => {
-  const userRole = sessionStorage.getItem('role') || 'user'
-  return routes.filter(route => 
-    route.showFor.includes(userRole)
-  )
-}
+  // Filter routes based on user role
+  const getAccessibleRoutes = () => {
+    const userRole = sessionStorage.getItem('role') || 'user'
+    return routes.filter(route =>
+      route.showFor.includes(userRole)
+    )
+  }
 
   // Check if the current path is a data category page
   const isDataPage = location.pathname.includes("/dashboard/data/")
-  
+
   // If it's a data page, expand the submenu by default
   useEffect(() => {
     if (isDataPage && !isDataSubmenuOpen) {
@@ -294,11 +294,10 @@ const getAccessibleRoutes = () => {
                   <div>
                     <button
                       onClick={() => setIsDataSubmenuOpen(!isDataSubmenuOpen)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        route.active
+                      className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                           ? "bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700"
                           : "text-gray-700 hover:bg-blue-50"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <route.icon className={`h-4 w-4 ${route.active ? "text-blue-600" : ""}`} />
@@ -318,11 +317,10 @@ const getAccessibleRoutes = () => {
                             <li key={category.id}>
                               <Link
                                 to={category.link || `/dashboard/data/${category.id}`}
-                                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                  location.pathname === (category.link || `/dashboard/data/${category.id}`)
+                                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${location.pathname === (category.link || `/dashboard/data/${category.id}`)
                                     ? "bg-blue-50 text-blue-700 font-medium"
                                     : "text-gray-600 hover:bg-blue-50 hover:text-blue-700 "
-                                }`}
+                                  }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 {category.name}
@@ -340,11 +338,10 @@ const getAccessibleRoutes = () => {
                 ) : (
                   <Link
                     to={route.href}
-                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      route.active
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                         ? "bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700"
                         : "text-gray-700 hover:bg-blue-50"
-                    }`}
+                      }`}
                   >
                     <route.icon className={`h-4 w-4 ${route.active ? "text-blue-600" : ""}`} />
                     {route.label}
@@ -371,8 +368,8 @@ const getAccessibleRoutes = () => {
             </div>
             <div className="flex items-center gap-2">
               {toggleDarkMode && (
-                <button 
-                  onClick={toggleDarkMode} 
+                <button
+                  onClick={toggleDarkMode}
                   className="text-blue-700 hover:text-blue-900 p-1 rounded-full hover:bg-blue-100"
                 >
                   {darkMode ? (
@@ -387,7 +384,7 @@ const getAccessibleRoutes = () => {
                   <span className="sr-only">{darkMode ? "Light mode" : "Dark mode"}</span>
                 </button>
               )}
-              <button 
+              <button
                 onClick={handleLogout}
                 className="text-blue-700 hover:text-blue-900 p-1 rounded-full hover:bg-blue-100"
               >
@@ -431,11 +428,10 @@ const getAccessibleRoutes = () => {
                       <div>
                         <button
                           onClick={() => setIsDataSubmenuOpen(!isDataSubmenuOpen)}
-                          className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            route.active
+                          className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                               ? "bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700"
                               : "text-gray-700 hover:bg-blue-50"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <route.icon className={`h-4 w-4 ${route.active ? "text-blue-600" : ""}`} />
@@ -459,11 +455,10 @@ const getAccessibleRoutes = () => {
                                 <li key={category.id}>
                                   <Link
                                     to={category.link || `/dashboard/data/${category.id}`}
-                                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                                      location.pathname === (category.link || `/dashboard/data/${category.id}`)
+                                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${location.pathname === (category.link || `/dashboard/data/${category.id}`)
                                         ? "bg-blue-50 text-blue-700 font-medium"
                                         : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
-                                    }`}
+                                      }`}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                   >
                                     {category.name}
@@ -481,11 +476,10 @@ const getAccessibleRoutes = () => {
                     ) : (
                       <Link
                         to={route.href}
-                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                          route.active
+                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${route.active
                             ? "bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700"
                             : "text-gray-700 hover:bg-blue-50"
-                        }`}
+                          }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <route.icon className={`h-4 w-4 ${route.active ? "text-blue-600" : ""}`} />
@@ -513,8 +507,8 @@ const getAccessibleRoutes = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {toggleDarkMode && (
-                    <button 
-                      onClick={toggleDarkMode} 
+                    <button
+                      onClick={toggleDarkMode}
                       className="text-blue-700 hover:text-blue-900 p-1 rounded-full hover:bg-blue-100"
                     >
                       {darkMode ? (
@@ -529,7 +523,7 @@ const getAccessibleRoutes = () => {
                       <span className="sr-only">{darkMode ? "Light mode" : "Dark mode"}</span>
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="text-blue-700 hover:text-blue-900 p-1 rounded-full hover:bg-blue-100 "
                   >
@@ -553,18 +547,18 @@ const getAccessibleRoutes = () => {
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-blue-50 to-purple-50">
           {children}
           <div className="fixed md:left-64 left-0 right-0 bottom-0 py-1 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center text-sm shadow-md z-10">
-          <a
-    href="https://www.botivate.in/" // Replace with actual URL
-    target="_blank"
-    rel="noopener noreferrer"
-    className="hover:underline"
-  >
-    Powered by-<span className="font-semibold">Botivate</span>
-  </a>
-    </div>
+            <a
+              href="https://www.botivate.in/" // Replace with actual URL
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              Powered by-<span className="font-semibold">Botivate</span>
+            </a>
+          </div>
         </main>
       </div>
-      
+
     </div>
   )
 }

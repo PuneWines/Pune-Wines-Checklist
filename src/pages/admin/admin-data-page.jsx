@@ -12,16 +12,35 @@ import {
   Check,
 } from "lucide-react";
 import AdminLayout from "../../components/layout/AdminLayout";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import LoadingOverlay from "../../components/LoadingOverlay";
+
 import DeleteButton from "../../components/admin/DeleteButton";
 import ReactDOM from "react-dom";
 
-// Google Apps Script URL
-const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbz47q4SiLvJJom8dRGteqjhufs0Iui4rYTLMeTYqOgY_MFrS0C0o0XkRCPzAOdEeg4jqg/exec";
-// Google Drive folder ID
-const DRIVE_FOLDER_ID = "1xdahLZtnhCGnHve4HdPolTm5y4DLqdyl";
+// Configuration object - Move all configurations here
+const CONFIG = {
+  // Google Apps Script URL
+  APPS_SCRIPT_URL:
+    "https://script.google.com/macros/s/AKfycbz47q4SiLvJJom8dRGteqjhufs0Iui4rYTLMeTYqOgY_MFrS0C0o0XkRCPzAOdEeg4jqg/exec",
 
-function AccountDataPage() {
+  // Google Drive folder ID for file uploads
+  DRIVE_FOLDER_ID: "1xdahLZtnhCGnHve4HdPolTm5y4DLqdyl",
+
+  // Sheet name to work with
+  SHEET_NAME: "STORE",
+
+  // Page configuration
+  PAGE_CONFIG: {
+    title: "Store Task Data",
+    historyTitle: "Store Task History",
+    description: "Showing today, tomorrow's tasks and past due tasks",
+    historyDescription:
+      "Read-only view of completed tasks with submission history",
+  },
+};
+
+function AdminDataPage() {
   const [accountData, setAccountData] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,14 +178,14 @@ function AccountDataPage() {
   // Update filteredAccountData calculation
   const filteredAccountData = searchTerm
     ? accountData
-        .filter((account) =>
-          Object.values(account).some(
-            (value) =>
-              value &&
-              value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          )
+      .filter((account) =>
+        Object.values(account).some(
+          (value) =>
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
-        .sort(sortDateWise)
+      )
+      .sort(sortDateWise)
     : accountData.sort(sortDateWise);
 
   // Update filteredHistoryData calculation to include member and date filtering
@@ -175,10 +194,10 @@ function AccountDataPage() {
       // Text search filter
       const matchesSearch = searchTerm
         ? Object.values(item).some(
-            (value) =>
-              value &&
-              value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          (value) =>
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : true;
 
       // Member filter (Column E - index 4)
@@ -230,14 +249,14 @@ function AccountDataPage() {
     const memberStats =
       selectedMembers.length > 0
         ? selectedMembers.reduce((stats, member) => {
-            const memberTasks = historyData.filter(
-              (task) => task["col4"] === member
-            ).length;
-            return {
-              ...stats,
-              [member]: memberTasks,
-            };
-          }, {})
+          const memberTasks = historyData.filter(
+            (task) => task["col4"] === member
+          ).length;
+          return {
+            ...stats,
+            [member]: memberTasks,
+          };
+        }, {})
         : {};
 
     // Calculate total of filtered tasks (when search and/or member filters are applied)
@@ -779,10 +798,8 @@ function AccountDataPage() {
       return;
     }
 
-    // Check if any selected item requires an image but doesn't have one
-    const missingRequiredImages = selectedItems.filter((id) => {
+    const missingRequiredImages = selectedItemsArray.filter((id) => {
       const item = accountData.find((account) => account._id === id);
-      // Check if column K (index 10) has "YES" value and no image is uploaded
       const requiresAttachment =
         item["col10"] && item["col10"].toUpperCase() === "YES";
       return requiresAttachment && !item.image;
@@ -798,39 +815,71 @@ function AccountDataPage() {
     setIsSubmitting(true);
 
     try {
-      // Get today's date formatted as DD/MM/YYYY for column M
       const today = new Date();
-      const todayFormatted = formatDateToDDMMYYYY(today);
+      // Format the date as DD/MM/YYYY HH:MM:SS
+      const day = today.getDate().toString().padStart(2, "0");
+      const month = (today.getMonth() + 1).toString().padStart(2, "0");
+      const year = today.getFullYear();
+      const hours = today.getHours().toString().padStart(2, "0");
+      const minutes = today.getMinutes().toString().padStart(2, "0");
+      const seconds = today.getSeconds().toString().padStart(2, "0");
+      const todayFormatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
+      // Now handle the background submission to Google Sheets
       const submissionData = await Promise.all(
-        selectedItems.map(async (id) => {
+        selectedItemsArray.map(async (id) => {
           const item = accountData.find((account) => account._id === id);
-          let imageData = null;
 
-          // If there's an image and it's a file (not a URL), convert to base64
+          let imageUrl = "";
+
           if (item.image instanceof File) {
-            imageData = await fileToBase64(item.image);
+            try {
+              const base64Data = await fileToBase64(item.image);
+
+              const uploadFormData = new FormData();
+              uploadFormData.append("action", "uploadFile");
+              uploadFormData.append("base64Data", base64Data);
+              uploadFormData.append(
+                "fileName",
+                `task_${item["col1"]}_${Date.now()}.${item.image.name
+                  .split(".")
+                  .pop()}`
+              );
+              uploadFormData.append("mimeType", item.image.type);
+              uploadFormData.append("folderId", CONFIG.DRIVE_FOLDER_ID);
+
+              const uploadResponse = await fetch(CONFIG.APPS_SCRIPT_URL, {
+                method: "POST",
+                body: uploadFormData,
+              });
+
+              const uploadResult = await uploadResponse.json();
+              if (uploadResult.success) {
+                imageUrl = uploadResult.fileUrl;
+              }
+            } catch (uploadError) {
+              console.error("Error uploading image:", uploadError);
+            }
           }
 
           return {
-            taskId: id,
+            taskId: item["col1"],
             rowIndex: item._rowIndex,
-            additionalInfo: additionalData[id] || "",
-            remarks: remarksData[id] || "", // Include remarks for column P
-            imageData: imageData,
-            folderId: DRIVE_FOLDER_ID,
-            // Add today's date for column M (submission date)
-            todayDate: todayFormatted,
+            actualDate: todayFormatted,
+            status: additionalData[id] || "",
+            remarks: remarksData[id] || "",
+            imageUrl: imageUrl,
           };
         })
       );
 
+      // Submit to Google Sheets
       const formData = new FormData();
-      formData.append("sheetName", "STORE");
-      formData.append("action", "updateSalesData");
+      formData.append("sheetName", CONFIG.SHEET_NAME);
+      formData.append("action", "updateTaskData");
       formData.append("rowData", JSON.stringify(submissionData));
 
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
         method: "POST",
         body: formData,
       });
@@ -838,31 +887,45 @@ function AccountDataPage() {
       const result = await response.json();
 
       if (result.success) {
+        // Prepare submitted items for history
+        const submittedItemsForHistory = selectedItemsArray.map((id) => {
+          const item = accountData.find((account) => account._id === id);
+          const subData = submissionData.find(d => d.taskId === item["col1"] && d.rowIndex === item._rowIndex);
+          return {
+            ...item,
+            col12: todayFormatted,
+            col14: additionalData[id] || "",
+            col15: remarksData[id] || "",
+            col16: subData.imageUrl || (item.image && typeof item.image === "string" ? item.image : ""),
+          };
+        });
+
+        // UPDATE state ONLY AFTER success
         setAccountData((prev) =>
-          prev.map((item) =>
-            selectedItems.includes(item._id)
-              ? { ...item, status: "completed", image: null }
-              : item
-          )
+          prev.filter((item) => !selectedItemsArray.includes(item._id))
         );
 
-        setSuccessMessage(
-          `Successfully processed ${selectedItems.length} account records! Columns M, O and P updated.`
-        );
+        setHistoryData((prev) => [...submittedItemsForHistory, ...prev]);
+
+        // Clear selections and form data
         setSelectedItems([]);
         setAdditionalData({});
-        setRemarksData({}); // Clear remarks data
+        setRemarksData({});
 
-        // Refresh data to see updated image URLs
+        setSuccessMessage(
+          `Successfully processed ${selectedItemsArray.length} task records! Data posted to sheet.`
+        );
+
+        // Auto-clear success message after 5 seconds
         setTimeout(() => {
-          fetchSheetData();
-        }, 2000);
+          setSuccessMessage("");
+        }, 5000);
       } else {
-        throw new Error(result.error || "Submission failed");
+        throw new Error(result.error || "Failed to post data to sheet");
       }
     } catch (error) {
       console.error("Submission error:", error);
-      alert("Failed to submit account records: " + error.message);
+      alert("Error submitting data: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -870,11 +933,20 @@ function AccountDataPage() {
 
   return (
     <AdminLayout>
+      <LoadingOverlay loading={isSubmitting || isSubmittingHistory} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
-          <h1 className="text-2xl font-bold tracking-tight text-purple-700">
-            {showHistory ? "Admin Data History" : "Admin Data"}
-          </h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight text-purple-700">
+              {showHistory
+                ? CONFIG.PAGE_CONFIG.historyTitle
+                : CONFIG.PAGE_CONFIG.title}
+            </h1>
+            {(isSubmitting || isSubmittingHistory) && (
+              <LoadingSpinner />
+            )}
+          </div>
+
 
           <div className="flex flex-wrap space-y-2 space-x-4">
             <div className="relative">
@@ -1074,13 +1146,13 @@ function AccountDataPage() {
                     startDate ||
                     endDate ||
                     searchTerm) && (
-                    <button
-                      onClick={resetFilters}
-                      className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
-                    >
-                      Clear All Filters
-                    </button>
-                  )}
+                      <button
+                        onClick={resetFilters}
+                        className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
+                      >
+                        Clear All Filters
+                      </button>
+                    )}
                 </div>
               </div>
               <ConfirmationModal
@@ -1112,15 +1184,15 @@ function AccountDataPage() {
                       startDate ||
                       endDate ||
                       searchTerm) && (
-                      <div className="px-3 py-2 bg-white rounded-md shadow-sm">
-                        <span className="text-xs text-gray-500">
-                          Filtered Results
-                        </span>
-                        <div className="text-lg font-semibold text-blue-600">
-                          {getTaskStatistics().filteredTotal}
+                        <div className="px-3 py-2 bg-white rounded-md shadow-sm">
+                          <span className="text-xs text-gray-500">
+                            Filtered Results
+                          </span>
+                          <div className="text-lg font-semibold text-blue-600">
+                            {getTaskStatistics().filteredTotal}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Individual member stats */}
                     {selectedMembers.map((member) => (
@@ -1150,7 +1222,7 @@ function AccountDataPage() {
                           checked={
                             filteredHistoryData.length > 0 &&
                             selectedHistoryItems.length ===
-                              filteredHistoryData.length
+                            filteredHistoryData.length
                           }
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -1208,8 +1280,8 @@ function AccountDataPage() {
                                 setSelectedHistoryItems((prev) =>
                                   prev.some((item) => item._id === history._id)
                                     ? prev.filter(
-                                        (item) => item._id !== history._id
-                                      )
+                                      (item) => item._id !== history._id
+                                    )
                                     : [...prev, history]
                                 );
                               }}
@@ -1264,9 +1336,9 @@ function AccountDataPage() {
                           className="px-6 py-4 text-center text-gray-500"
                         >
                           {searchTerm ||
-                          selectedMembers.length > 0 ||
-                          startDate ||
-                          endDate
+                            selectedMembers.length > 0 ||
+                            startDate ||
+                            endDate
                             ? "No historical records matching your filters"
                             : "No completed records found"}
                         </td>
@@ -1327,11 +1399,10 @@ function AccountDataPage() {
                     filteredAccountData.map((account) => (
                       <tr
                         key={account._id}
-                        className={`${
-                          selectedItems.includes(account._id)
-                            ? "bg-purple-50"
-                            : ""
-                        } hover:bg-gray-50`}
+                        className={`${selectedItems.includes(account._id)
+                          ? "bg-purple-50"
+                          : ""
+                          } hover:bg-gray-50`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
@@ -1431,11 +1502,10 @@ function AccountDataPage() {
                             </div>
                           ) : (
                             <label
-                              className={`flex items-center cursor-pointer ${
-                                account["col10"]?.toUpperCase() === "YES"
-                                  ? "text-red-600 font-medium"
-                                  : "text-purple-600"
-                              } hover:text-purple-800`}
+                              className={`flex items-center cursor-pointer ${account["col10"]?.toUpperCase() === "YES"
+                                ? "text-red-600 font-medium"
+                                : "text-purple-600"
+                                } hover:text-purple-800`}
                             >
                               <Upload className="mr-1 w-4 h-4" />
                               <span className="text-xs">
@@ -1468,7 +1538,7 @@ function AccountDataPage() {
                       >
                         {searchTerm
                           ? "No transactions matching your search"
-                          : "No pending account records found for today or tomorrow"}
+                          : "No pending tasks found for today, tomorrow, or past due dates"}
                       </td>
                     </tr>
                   )}
@@ -1482,4 +1552,4 @@ function AccountDataPage() {
   );
 }
 
-export default AccountDataPage;
+export default AdminDataPage;

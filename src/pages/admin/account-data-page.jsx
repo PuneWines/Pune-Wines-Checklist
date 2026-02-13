@@ -10,6 +10,9 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import AdminLayout from "../../components/layout/AdminLayout";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import LoadingOverlay from "../../components/LoadingOverlay";
+
 
 // Configuration object - Move all configurations here
 const CONFIG = {
@@ -333,10 +336,10 @@ function AccountDataPage() {
       // Search filter
       const matchesSearch = searchTerm
         ? Object.values(account).some(
-            (value) =>
-              value &&
-              value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          (value) =>
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
         : true;
 
       // Date range filter
@@ -395,13 +398,13 @@ function AccountDataPage() {
       .filter((item) => {
         const matchesSearch = searchTerm
           ? Object.values(item).some(
-              (value) =>
-                value &&
-                value
-                  .toString()
-                  .toLowerCase()
-                  .includes(searchTerm.toLowerCase())
-            )
+            (value) =>
+              value &&
+              value
+                .toString()
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase())
+          )
           : true;
 
         const matchesMember =
@@ -454,14 +457,14 @@ function AccountDataPage() {
     const memberStats =
       selectedMembers.length > 0
         ? selectedMembers.reduce((stats, member) => {
-            const memberTasks = historyData.filter(
-              (task) => task["col4"] === member
-            ).length;
-            return {
-              ...stats,
-              [member]: memberTasks,
-            };
-          }, {})
+          const memberTasks = historyData.filter(
+            (task) => task["col4"] === member
+          ).length;
+          return {
+            ...stats,
+            [member]: memberTasks,
+          };
+        }, {})
         : {};
     const filteredTotal = filteredHistoryData.length;
 
@@ -584,8 +587,8 @@ function AccountDataPage() {
         const stableId = taskId
           ? `task_${taskId}_${googleSheetsRowIndex}`
           : `row_${googleSheetsRowIndex}_${Math.random()
-              .toString(36)
-              .substring(2, 15)}`;
+            .toString(36)
+            .substring(2, 15)}`;
 
         const rowData = {
           _id: stableId,
@@ -1145,40 +1148,12 @@ function AccountDataPage() {
         };
       });
 
-      // CACHE MEMORY UPDATE 1: Remove submitted items from pending table immediately
-      setAccountData((prev) =>
-        prev.filter((item) => !selectedItems.has(item._id))
-      );
-
-      // CACHE MEMORY UPDATE 2: Add submitted items to history immediately
-      setHistoryData((prev) => [...submittedItemsForHistory, ...prev]);
-
-      // Clear selections and form data immediately
-      setSelectedItems(new Set());
-      setAdditionalData({});
-      setRemarksData({});
-
-      // Show success message immediately
-      setSuccessMessage(
-        `Successfully processed ${selectedItemsArray.length} task records! Tasks moved to history.`
-      );
-
-      // Auto-clear success message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 5000);
+      // Show success message immediately deleted - moving after successful post
 
       // Now handle the background submission to Google Sheets
       const submissionData = await Promise.all(
         selectedItemsArray.map(async (id) => {
           const item = accountData.find((account) => account._id === id);
-
-          console.log(`Preparing submission for item:`, {
-            id: id,
-            taskId: item["col1"],
-            rowIndex: item._rowIndex,
-            expectedTaskId: item._taskId,
-          });
 
           let imageUrl = "";
 
@@ -1206,15 +1181,6 @@ function AccountDataPage() {
               const uploadResult = await uploadResponse.json();
               if (uploadResult.success) {
                 imageUrl = uploadResult.fileUrl;
-
-                // Update the history data with the actual image URL
-                setHistoryData((prev) =>
-                  prev.map((historyItem) =>
-                    historyItem._id === id
-                      ? { ...historyItem, col14: imageUrl }
-                      : historyItem
-                  )
-                );
               }
             } catch (uploadError) {
               console.error("Error uploading image:", uploadError);
@@ -1224,7 +1190,7 @@ function AccountDataPage() {
           return {
             taskId: item["col1"],
             rowIndex: item._rowIndex,
-            actualDate: todayFormatted, // Use the formatted date string
+            actualDate: todayFormatted,
             status: additionalData[id] || "",
             remarks: remarksData[id] || "",
             imageUrl: imageUrl,
@@ -1232,9 +1198,7 @@ function AccountDataPage() {
         })
       );
 
-      console.log("Final submission data:", submissionData);
-
-      // Submit to Google Sheets in background
+      // Submit to Google Sheets
       const formData = new FormData();
       formData.append("sheetName", CONFIG.SHEET_NAME);
       formData.append("action", "updateTaskData");
@@ -1247,17 +1211,50 @@ function AccountDataPage() {
 
       const result = await response.json();
 
-      if (!result.success) {
-        console.error("Background submission failed:", result.error);
+      if (result.success) {
+        // Update submitted items for history with real image URLs
+        const submittedItemsForHistoryWithUrls = selectedItemsArray.map((id) => {
+          const item = accountData.find((account) => account._id === id);
+          const subData = submissionData.find(d => d.taskId === item["col1"] && d.rowIndex === item._rowIndex);
+          return {
+            ...item,
+            col10: todayFormatted,
+            col12: additionalData[id] || "",
+            col13: remarksData[id] || "",
+            col14: subData.imageUrl || (item.image && typeof item.image === "string" ? item.image : ""),
+          };
+        });
+
+        // UPDATE state ONLY AFTER success
+        setAccountData((prev) =>
+          prev.filter((item) => !selectedItemsArray.includes(item._id))
+        );
+
+        setHistoryData((prev) => [...submittedItemsForHistoryWithUrls, ...prev]);
+
+        // Clear selections and form data
+        setSelectedItems(new Set());
+        setAdditionalData({});
+        setRemarksData({});
+
+        setSuccessMessage(
+          `Successfully processed ${selectedItemsArray.length} task records! Data posted to sheet.`
+        );
+
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 5000);
+      } else {
+        throw new Error(result.error || "Failed to post data to sheet");
       }
     } catch (error) {
       console.error("Submission error:", error);
-      alert(
-        "Warning: There was an error with background submission, but your changes are saved locally."
-      );
+      alert("Error submitting data: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
+
   };
 
   // Convert Set to Array for display
@@ -1266,13 +1263,20 @@ function AccountDataPage() {
 
   return (
     <AdminLayout>
+      <LoadingOverlay loading={isSubmitting} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
-          <h1 className="text-2xl font-bold tracking-tight text-purple-700">
-            {showHistory
-              ? CONFIG.PAGE_CONFIG.historyTitle
-              : CONFIG.PAGE_CONFIG.title}
-          </h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight text-purple-700">
+              {showHistory
+                ? CONFIG.PAGE_CONFIG.historyTitle
+                : CONFIG.PAGE_CONFIG.title}
+            </h1>
+            {(isSubmitting || isSubmittingHistory) && (
+              <LoadingSpinner />
+            )}
+          </div>
+
 
           <div className="flex flex-wrap space-y-2 space-x-4">
             <div className="relative">
@@ -1405,9 +1409,8 @@ function AccountDataPage() {
             </h2>
             <p className="text-sm text-purple-600">
               {showHistory
-                ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${
-                    userRole === "admin" ? "all" : "your"
-                  } tasks`
+                ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"
+                } tasks`
                 : CONFIG.PAGE_CONFIG.description}
             </p>
           </div>
@@ -1497,13 +1500,13 @@ function AccountDataPage() {
                   pendingEndDate ||
                   searchTerm ||
                   selectedPendingMembers.length > 0) && (
-                  <button
-                    onClick={resetFilters}
-                    className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
-                  >
-                    Clear All Filters
-                  </button>
-                )}
+                    <button
+                      onClick={resetFilters}
+                      className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
+                    >
+                      Clear All Filters
+                    </button>
+                  )}
               </div>
             </div>
           )}
@@ -1601,13 +1604,13 @@ function AccountDataPage() {
                     startDate ||
                     endDate ||
                     searchTerm) && (
-                    <button
-                      onClick={resetFilters}
-                      className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
-                    >
-                      Clear All Filters
-                    </button>
-                  )}
+                      <button
+                        onClick={resetFilters}
+                        className="px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200"
+                      >
+                        Clear All Filters
+                      </button>
+                    )}
                 </div>
               </div>
 
@@ -1631,15 +1634,15 @@ function AccountDataPage() {
                       startDate ||
                       endDate ||
                       searchTerm) && (
-                      <div className="px-3 py-2 bg-white rounded-md shadow-sm">
-                        <span className="text-xs text-gray-500">
-                          Filtered Results
-                        </span>
-                        <div className="text-lg font-semibold text-blue-600">
-                          {getTaskStatistics().filteredTotal}
+                        <div className="px-3 py-2 bg-white rounded-md shadow-sm">
+                          <span className="text-xs text-gray-500">
+                            Filtered Results
+                          </span>
+                          <div className="text-lg font-semibold text-blue-600">
+                            {getTaskStatistics().filteredTotal}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {selectedMembers.map((member) => (
                       <div
@@ -1668,7 +1671,7 @@ function AccountDataPage() {
                           checked={
                             filteredHistoryData.length > 0 &&
                             selectedHistoryItems.size ===
-                              filteredHistoryData.length
+                            filteredHistoryData.length
                           }
                           onChange={handleSelectAllHistoryItems}
                         />
@@ -1723,9 +1726,8 @@ function AccountDataPage() {
                         return (
                           <tr
                             key={history._id}
-                            className={`${
-                              isHistorySelected ? "bg-green-50" : ""
-                            } hover:bg-gray-50`}
+                            className={`${isHistorySelected ? "bg-green-50" : ""
+                              } hover:bg-gray-50`}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
@@ -1792,13 +1794,12 @@ function AccountDataPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap bg-blue-50">
                               <span
-                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  history["col12"] === "Yes"
-                                    ? "bg-green-100 text-green-800"
-                                    : history["col12"] === "No"
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${history["col12"] === "Yes"
+                                  ? "bg-green-100 text-green-800"
+                                  : history["col12"] === "No"
                                     ? "bg-red-100 text-red-800"
                                     : "bg-gray-100 text-gray-800"
-                                }`}
+                                  }`}
                               >
                                 {history["col12"] || "—"}
                               </span>
@@ -1845,9 +1846,9 @@ function AccountDataPage() {
                           className="px-6 py-4 text-center text-gray-500"
                         >
                           {searchTerm ||
-                          selectedMembers.length > 0 ||
-                          startDate ||
-                          endDate
+                            selectedMembers.length > 0 ||
+                            startDate ||
+                            endDate
                             ? "No historical records matching your filters"
                             : "No completed records found"}
                         </td>
@@ -1883,7 +1884,7 @@ function AccountDataPage() {
                           className="block mt-1 w-4 h-4 text-red-600 rounded border-gray-300"
                           checked={
                             selectedDeleteItems.size ===
-                              filteredAccountData.length &&
+                            filteredAccountData.length &&
                             filteredAccountData.length > 0
                           }
                           onChange={(e) => {
@@ -1945,9 +1946,8 @@ function AccountDataPage() {
                       return (
                         <tr
                           key={account._id}
-                          className={`${
-                            isSelected ? "bg-purple-50" : ""
-                          } hover:bg-gray-50`}
+                          className={`${isSelected ? "bg-purple-50" : ""
+                            } hover:bg-gray-50`}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
@@ -2105,11 +2105,10 @@ function AccountDataPage() {
                                   type="button"
                                   onClick={() => startCamera(account._id)}
                                   disabled={!isSelected}
-                                  className={`flex items-center justify-center p-1 rounded-md ${
-                                    account["col9"]?.toUpperCase() === "YES"
-                                      ? "bg-red-100 text-red-600"
-                                      : "bg-purple-100 text-purple-600"
-                                  } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  className={`flex items-center justify-center p-1 rounded-md ${account["col9"]?.toUpperCase() === "YES"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-purple-100 text-purple-600"
+                                    } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -2147,11 +2146,10 @@ function AccountDataPage() {
                                     input.click();
                                   }}
                                   disabled={!isSelected}
-                                  className={`flex items-center justify-center p-1 rounded-md ${
-                                    account["col9"]?.toUpperCase() === "YES"
-                                      ? "bg-red-100 text-red-600"
-                                      : "bg-blue-100 text-blue-600"
-                                  } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  className={`flex items-center justify-center p-1 rounded-md ${account["col9"]?.toUpperCase() === "YES"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-blue-100 text-blue-600"
+                                    } hover:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                   <Upload className="mr-1 w-5 h-5" />
                                   <span className="text-xs">Upload Image</span>

@@ -9,6 +9,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import AdminLayout from "../components/layout/AdminLayout";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 // Configuration object - Move all configurations here
 const CONFIG = {
@@ -290,9 +291,9 @@ function DelegationDataPage() {
         // Show success message
         setSuccessMessage(
           `✅ Successfully moved ${successfulMoves.length} item(s) back to pending tasks.` +
-            (failedMoves.length > 0
-              ? ` ${failedMoves.length} item(s) failed.`
-              : "")
+          (failedMoves.length > 0
+            ? ` ${failedMoves.length} item(s) failed.`
+            : "")
         );
 
         // Refresh BOTH pending and history data after 2 seconds
@@ -460,15 +461,15 @@ function DelegationDataPage() {
   const filteredAccountData = useMemo(() => {
     const filtered = debouncedSearchTerm
       ? accountData.filter((account) =>
-          Object.values(account).some(
-            (value) =>
-              value &&
-              value
-                .toString()
-                .toLowerCase()
-                .includes(debouncedSearchTerm.toLowerCase())
-          )
+        Object.values(account).some(
+          (value) =>
+            value &&
+            value
+              .toString()
+              .toLowerCase()
+              .includes(debouncedSearchTerm.toLowerCase())
         )
+      )
       : accountData;
 
     return filtered.sort(sortDateWise);
@@ -488,13 +489,13 @@ function DelegationDataPage() {
 
         const matchesSearch = debouncedSearchTerm
           ? Object.values(item).some(
-              (value) =>
-                value &&
-                value
-                  .toString()
-                  .toLowerCase()
-                  .includes(debouncedSearchTerm.toLowerCase())
-            )
+            (value) =>
+              value &&
+              value
+                .toString()
+                .toLowerCase()
+                .includes(debouncedSearchTerm.toLowerCase())
+          )
           : true;
 
         let matchesDateRange = true;
@@ -601,8 +602,8 @@ function DelegationDataPage() {
 
                 const rowValues = row.c
                   ? row.c.map((cell) =>
-                      cell && cell.v !== undefined ? cell.v : ""
-                    )
+                    cell && cell.v !== undefined ? cell.v : ""
+                  )
                   : [];
 
                 // Map all columns including column H (col7) for user filtering and column I (col8) for Task
@@ -685,8 +686,8 @@ function DelegationDataPage() {
         const stableId = taskId
           ? `task_${taskId}_${googleSheetsRowIndex}`
           : `row_${googleSheetsRowIndex}_${Math.random()
-              .toString(36)
-              .substring(2, 15)}`;
+            .toString(36)
+            .substring(2, 15)}`;
 
         const rowData = {
           _id: stableId,
@@ -1013,6 +1014,7 @@ function DelegationDataPage() {
   const selectedHistoryItemsCount = selectedHistoryItems.size;
   return (
     <AdminLayout>
+      <LoadingOverlay loading={isSubmitting} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
           <h1 className="text-2xl font-bold tracking-tight text-purple-700">
@@ -1110,9 +1112,8 @@ function DelegationDataPage() {
             </h2>
             <p className="text-sm text-purple-600">
               {showHistory
-                ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${
-                    userRole === "admin" ? "all" : "your"
-                  } tasks`
+                ? `${CONFIG.PAGE_CONFIG.historyDescription} for ${userRole === "admin" ? "all" : "your"
+                } tasks`
                 : CONFIG.PAGE_CONFIG.description}
             </p>
           </div>
@@ -1200,7 +1201,7 @@ function DelegationDataPage() {
                           checked={
                             filteredHistoryData.length > 0 &&
                             selectedHistoryItems.size ===
-                              filteredHistoryData.length
+                            filteredHistoryData.length
                           }
                           onChange={handleSelectAllHistoryItems}
                         />
@@ -1245,9 +1246,8 @@ function DelegationDataPage() {
                         return (
                           <tr
                             key={history._id}
-                            className={`${
-                              isHistorySelected ? "bg-green-50" : ""
-                            } hover:bg-gray-50`}
+                            className={`${isHistorySelected ? "bg-green-50" : ""
+                              } hover:bg-gray-50`}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
@@ -1279,13 +1279,12 @@ function DelegationDataPage() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span
-                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  history["col2"] === "Done"
-                                    ? "bg-green-100 text-green-800"
-                                    : history["col2"] === "Extend date"
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${history["col2"] === "Done"
+                                  ? "bg-green-100 text-green-800"
+                                  : history["col2"] === "Extend date"
                                     ? "bg-yellow-100 text-yellow-800"
                                     : "bg-gray-100 text-gray-800"
-                                }`}
+                                  }`}
                               >
                                 {history["col2"] || "—"}
                               </span>
@@ -1391,44 +1390,38 @@ function DelegationDataPage() {
                       Task Description
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-yellow-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-yellow-50" : ""
+                        }`}
                     >
                       Task End Date
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-green-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-green-50" : ""
+                        }`}
                     >
                       Planned Date
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-blue-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-blue-50" : ""
+                        }`}
                     >
                       Status
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-indigo-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-indigo-50" : ""
+                        }`}
                     >
                       Next Target Date
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-purple-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-purple-50" : ""
+                        }`}
                     >
                       Remarks
                     </th>
                     <th
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                        !accountData["col17"] ? "bg-orange-50" : ""
-                      }`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!accountData["col17"] ? "bg-orange-50" : ""
+                        }`}
                     >
                       Upload Image
                     </th>
@@ -1442,9 +1435,8 @@ function DelegationDataPage() {
                       return (
                         <tr
                           key={account._id}
-                          className={`${
-                            isSelected ? "bg-purple-50" : ""
-                          } hover:bg-gray-50 ${rowColorClass}`}
+                          className={`${isSelected ? "bg-purple-50" : ""
+                            } hover:bg-gray-50 ${rowColorClass}`}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
@@ -1485,27 +1477,24 @@ function DelegationDataPage() {
                             </div>
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-yellow-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-yellow-50" : ""
+                              }`}
                           >
                             <div className="text-sm text-gray-900">
                               {formatDateForDisplay(account["col6"])}
                             </div>
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-green-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-green-50" : ""
+                              }`}
                           >
                             <div className="text-sm text-gray-900">
                               {formatDateForDisplay(account["col10"])}
                             </div>
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-blue-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-blue-50" : ""
+                              }`}
                           >
                             <select
                               disabled={!isSelected}
@@ -1521,9 +1510,8 @@ function DelegationDataPage() {
                             </select>
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-indigo-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-indigo-50" : ""
+                              }`}
                           >
                             <input
                               type="date"
@@ -1534,18 +1522,18 @@ function DelegationDataPage() {
                               value={
                                 nextTargetDate[account._id]
                                   ? (() => {
-                                      const dateStr =
-                                        nextTargetDate[account._id];
-                                      if (dateStr && dateStr.includes("/")) {
-                                        const [day, month, year] =
-                                          dateStr.split("/");
-                                        return `${year}-${month.padStart(
-                                          2,
-                                          "0"
-                                        )}-${day.padStart(2, "0")}`;
-                                      }
-                                      return dateStr;
-                                    })()
+                                    const dateStr =
+                                      nextTargetDate[account._id];
+                                    if (dateStr && dateStr.includes("/")) {
+                                      const [day, month, year] =
+                                        dateStr.split("/");
+                                      return `${year}-${month.padStart(
+                                        2,
+                                        "0"
+                                      )}-${day.padStart(2, "0")}`;
+                                    }
+                                    return dateStr;
+                                  })()
                                   : ""
                               }
                               onChange={(e) => {
@@ -1566,9 +1554,8 @@ function DelegationDataPage() {
                             />
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-purple-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-purple-50" : ""
+                              }`}
                           >
                             <input
                               type="text"
@@ -1585,9 +1572,8 @@ function DelegationDataPage() {
                             />
                           </td>
                           <td
-                            className={`px-6 py-4 whitespace-nowrap ${
-                              !account["col17"] ? "bg-orange-50" : ""
-                            }`}
+                            className={`px-6 py-4 whitespace-nowrap ${!account["col17"] ? "bg-orange-50" : ""
+                              }`}
                           >
                             {account.image ? (
                               <div className="flex items-center">
@@ -1624,11 +1610,10 @@ function DelegationDataPage() {
                               </div>
                             ) : (
                               <label
-                                className={`flex items-center cursor-pointer ${
-                                  account["col9"]?.toUpperCase() === "YES"
-                                    ? "text-red-600 font-medium"
-                                    : "text-purple-600"
-                                } hover:text-purple-800`}
+                                className={`flex items-center cursor-pointer ${account["col9"]?.toUpperCase() === "YES"
+                                  ? "text-red-600 font-medium"
+                                  : "text-purple-600"
+                                  } hover:text-purple-800`}
                               >
                                 <Upload className="mr-1 w-4 h-4" />
                                 <span className="text-xs">
@@ -1662,7 +1647,7 @@ function DelegationDataPage() {
                       >
                         {searchTerm
                           ? "No tasks matching your search"
-                          : "No pending tasks found"}
+                          : "No pending tasks found for today, tomorrow, or past due dates"}
                       </td>
                     </tr>
                   )}
