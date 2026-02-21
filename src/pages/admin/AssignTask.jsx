@@ -155,6 +155,7 @@ export default function AssignTask() {
   const [givenByOptions, setGivenByOptions] = useState([]);
   const [allDoerOptions, setAllDoerOptions] = useState([]);
   const [filteredDoerOptions, setFilteredDoerOptions] = useState([]);
+  const [availableLevels, setAvailableLevels] = useState([]);
 
   const frequencies = [
     { value: "one-time", label: "One Time (No Recurrence)" },
@@ -191,7 +192,19 @@ export default function AssignTask() {
       // If department changes, reset doer and filter doer options
       if (name === "department") {
         newFormData.doer = "";
+        newFormData.taskLevel = "";
+        setAvailableLevels([]);
         filterDoerOptions(value);
+      }
+
+      // If doer changes, fetch available levels
+      if (name === "doer") {
+        newFormData.taskLevel = "";
+        if (value) {
+          fetchAvailableLevels(prev.department, value);
+        } else {
+          setAvailableLevels([]);
+        }
       }
 
       return newFormData;
@@ -211,6 +224,54 @@ export default function AssignTask() {
 
     const filtered = allDoerOptions.filter(doer => doer.shop === selectedShop);
     setFilteredDoerOptions(filtered.map(doer => doer.name));
+  };
+
+  // Function to fetch available levels for a specific doer and shop
+  const fetchAvailableLevels = async (shop, doerName) => {
+    if (!shop || !doerName) {
+      setAvailableLevels([]);
+      return;
+    }
+
+    try {
+      const sheetId = "1GnzBl9yq2M5FXBeCNnPIVL5PFSTXi2T3SBBOCHAKqMs";
+      const sheetName = "Task Details";
+
+      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
+        sheetName
+      )}`;
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch task details: ${response.status}`);
+
+      const text = await response.text();
+      const jsonStart = text.indexOf("{");
+      const jsonEnd = text.lastIndexOf("}");
+      const data = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+
+      if (!data.table || !data.table.rows) return;
+
+      const levels = new Set();
+      data.table.rows.forEach(row => {
+        const rowShop = row.c?.[1]?.v?.toString().trim();
+        const rowDoer = row.c?.[2]?.v?.toString().trim();
+        const rowLevel = row.c?.[3]?.v?.toString().trim();
+
+        if (rowShop === shop && rowDoer === doerName && rowLevel) {
+          levels.add(rowLevel);
+        }
+      });
+
+      const levelList = Array.from(levels).sort();
+      setAvailableLevels(levelList);
+
+      // Auto-select if only one level is available
+      if (levelList.length === 1) {
+        setFormData(prev => ({ ...prev, taskLevel: levelList[0] }));
+      }
+    } catch (error) {
+      console.error("Error fetching available levels:", error);
+    }
   };
 
   // Auto-trigger generation when Shop, Doer, and Level are all selected
@@ -884,11 +945,14 @@ export default function AssignTask() {
                   onChange={handleChange}
                   className="w-full rounded-md border border-purple-200 p-2 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
-                  <option value="">Select Level (Optional)</option>
-                  <option value="L1">Level1</option>
-                  <option value="L2">Level2</option>
-                  <option value="L3">Level3</option>
-                  <option value="L4">Level4</option>
+                  <option value="">
+                    {availableLevels.length > 0 ? "Select Level" : "No Levels Available"}
+                  </option>
+                  {availableLevels.map((level) => (
+                    <option key={level} value={level}>
+                      {level.startsWith("L") ? `Level${level.substring(1)}` : level}
+                    </option>
+                  ))}
                 </select>
               </div>
 

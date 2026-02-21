@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
+import LoadingOverlay from "../../components/LoadingOverlay"
 
 const AllTasks = () => {
   // Google Sheets configuration
@@ -518,6 +519,7 @@ const AllTasks = () => {
 
   return (
     <div className="space-y-6">
+      <LoadingOverlay loading={isSubmitting} />
       {/* Existing header and logout button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-purple-700">
@@ -661,8 +663,8 @@ const AllTasks = () => {
                         <label
                           htmlFor={`file-${task._id}`}
                           className={`px-3 py-2 rounded cursor-pointer transition flex items-center justify-center ${selectedTasks.includes(task._id)
-                              ? "bg-blue-500 text-white hover:bg-blue-600"
-                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
                             }`}
                         >
                           Upload Image
@@ -700,8 +702,8 @@ const AllTasks = () => {
       {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${toast.type === "success"
-            ? "bg-green-100 text-green-800 border-l-4 border-green-500"
-            : "bg-red-100 text-red-800 border-l-4 border-red-500"
+          ? "bg-green-100 text-green-800 border-l-4 border-green-500"
+          : "bg-red-100 text-red-800 border-l-4 border-red-500"
           }`}>
           {toast.message}
         </div>
