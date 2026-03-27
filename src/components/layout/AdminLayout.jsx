@@ -25,7 +25,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   // Function to fetch data using Apps Script
   const fetchDataFromAppsScript = async (sheetName) => {
     try {
-      const response = await fetch(`${APPS_SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}&action=fetch`)
+      const response = await fetch(`${APPS_SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}&action=searchTasks`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

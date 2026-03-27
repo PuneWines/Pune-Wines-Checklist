@@ -3,7 +3,7 @@ import LoadingOverlay from "../../components/LoadingOverlay"
 
 const AllTasks = () => {
   // Google Sheets configuration
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz47q4SiLvJJom8dRGteqjhufs0Iui4rYTLMeTYqOgY_MFrS0C0o0XkRCPzAOdEeg4jqg/exec"
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec"
   const SHEET_NAME = "DATA"
   const SHEET_ID = "1pso64b1nmDBPtq9V5Ay0L93smot03LKat_K0wka0XDY" // Your specific sheet ID
 
@@ -120,15 +120,7 @@ const AllTasks = () => {
       try {
         setIsLoading(true)
 
-        const formData = new FormData()
-        formData.append('action', 'fetchTasks')
-        formData.append('sheetId', SHEET_ID)
-        formData.append('sheetName', SHEET_NAME)
-
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: formData
-        })
+        const response = await fetch(`${SCRIPT_URL}?sheet=${encodeURIComponent(SHEET_NAME)}&action=searchTasks`)
 
         const data = await response.json()
 

@@ -546,10 +546,10 @@ function DelegationDataPage() {
       // Parallel fetch both sheets for better performance
       const [mainResponse, historyResponse] = await Promise.all([
         fetch(
-          `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SOURCE_SHEET_NAME}&action=fetch`
+          `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SOURCE_SHEET_NAME}&action=searchTasks`
         ),
         fetch(
-          `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.TARGET_SHEET_NAME}&action=fetch`
+          `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.TARGET_SHEET_NAME}&action=searchTasks`
         ).catch(() => null),
       ]);
 

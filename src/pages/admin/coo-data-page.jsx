@@ -12,7 +12,7 @@ import ReactDOM from 'react-dom';
 const CONFIG = {
   // Google Apps Script URL
   APPS_SCRIPT_URL:
-    "https://script.google.com/macros/s/AKfycby0-aE9uNuU3yBJ9SAHvAfXycYt5vPyvAtlAauVy-xlH9rc4fPCGSQM6pvsqZ9QvSvbyg/exec",
+    "https://script.google.com/macros/s/AKfycbyBPTmVksbejNrOPNZNHYajQWWLbzA34hshoAPYig99hcqkYuiKy-j5pavsuqeFKIXNFg/exec",
 
   // Google Drive folder ID for file uploads
   DRIVE_FOLDER_ID: "1TzjAIpRAoz017MfzZ0gZaN-v5jyKtg7E",

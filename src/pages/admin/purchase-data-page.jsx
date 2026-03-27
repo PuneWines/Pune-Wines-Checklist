@@ -495,7 +495,7 @@ function PurchaseDataPage() {
       const historyRows = [];
 
       const response = await fetch(
-        `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SHEET_NAME}&action=fetch`
+        `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SHEET_NAME}&action=searchTasks`
       );
 
       if (!response.ok) {
